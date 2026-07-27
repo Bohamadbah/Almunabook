@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ساعة | حجز عاملات نظافة بالساعة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F6FAF9;
+    --deep: #0E3B39;
+    --teal: #2F9E8F;
+    --teal-light: #E6F3F1;
+    --amber: #F2A20C;
+    --amber-dark: #C97F00;
+    --line: #DCEAE8;
+    --muted: #5B6B6A;
+    --white: #FFFFFF;
+    --danger: #C9503D;
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--deep);
+    font-family:'Tajawal', sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3,.display{
+    font-family:'Cairo', sans-serif;
+    font-weight:800;
+    color:var(--deep);
+    margin:0;
+  }
+  .container{
+    max-width:1120px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+  a{color:inherit;}
+
+  /* ---------- Header ---------- */
+  header.site{
+    position:sticky; top:0; z-index:50;
+    background:rgba(246,250,249,0.9);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 0;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; color:var(--deep);
+  }
+  .brand .dot{
+    width:12px;height:12px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 4px var(--teal-light);
+  }
+  .nav-links{ display:flex; gap:28px; list-style:none; margin:0; padding:0; }
+  .nav-links a{
+    text-decoration:none; font-weight:700; color:var(--muted); font-size:.95rem;
+    transition:color .2s;
+  }
+  .nav-links a:hover{color:var(--teal);}
+  .nav-cta{
+    background:var(--deep); color:var(--white); border:none; border-radius:999px;
+    padding:10px 22px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:.9rem;
+    cursor:pointer; transition:transform .15s, background .2s;
+  }
+  .nav-cta:hover{background:var(--teal); transform:translateY(-1px);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding:64px 0 40px;
+    display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--teal-light); color:var(--teal); border-radius:999px;
+    padding:6px 14px; font-weight:700; font-size:.8rem; margin-bottom:18px;
+  }
+  .eyebrow::before{content:'●'; font-size:.6rem;}
+  .hero h1{
+    font-size:clamp(2.1rem, 4vw, 3.2rem);
+    line-height:1.25;
+    margin-bottom:18px;
+  }
+  .hero h1 span{color:var(--teal);}
+  .hero p.lead{
+    color:var(--muted); font-size:1.08rem; max-width:46ch; margin-bottom:28px;
+  }
+  .hero-ctas{display:flex; gap:14px; flex-wrap:wrap;}
+  .btn-primary{
+    background:var(--amber); color:var(--deep); border:none; border-radius:999px;
+    padding:14px 28px; font-family:'Cairo',sans-serif; font-weight:800; font-size:1rem;
+    cursor:pointer; transition:transform .15s, box-shadow .2s;
+    box-shadow:0 8px 20px -8px rgba(242,162,12,.7);
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 12px 24px -8px rgba(242,162,12,.8);}
+  .btn-ghost{
+    background:transparent; color:var(--deep); border:2px solid var(--line); border-radius:999px;
+    padding:12px 26px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:.95rem;
+    cursor:pointer; transition:border-color .2s, background .2s;
+  }
+  .btn-ghost:hover{border-color:var(--teal); background:var(--teal-light);}
+
+  .hero-stats{ display:flex; gap:28px; margin-top:34px; }
+  .hero-stats div{ text-align:right; }
+  .hero-stats strong{ display:block; font-family:'Cairo',sans-serif; font-size:1.5rem; color:var(--deep); }
+  .hero-stats span{ color:var(--muted); font-size:.82rem; }
+
+  /* Clock signature */
+  .clock-wrap{ display:flex; align-items:center; justify-content:center; }
+  .clock-face{ width:100%; max-width:340px; }
+  .seg{ transition: fill .5s ease, opacity .5s ease; }
+  .clock-center-text{ font-family:'Cairo',sans-serif; }
+
+  /* ---------- Section shell ---------- */
+  section{ padding:64px 0; }
+  .section-head{ margin-bottom:34px; max-width:640px; }
+  .section-head .eyebrow{margin-bottom:12px;}
+  .section-head h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); margin-bottom:10px; }
+  .section-head p{ color:var(--muted); }
+
+  /* ---------- How it works ---------- */
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .step{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+    padding:26px; position:relative;
+  }
+  .step .num{
+    font-family:'Cairo',sans-serif; font-weight:900; font-size:2rem; color:var(--teal-light);
+    -webkit-text-stroke:1.5px var(--teal); color:transparent;
+    margin-bottom:10px; display:block;
+  }
+  .step h3{ font-size:1.1rem; margin-bottom:8px; }
+  .step p{ color:var(--muted); font-size:.92rem; margin:0; }
+
+  /* ---------- Filters ---------- */
+  .filters{
+    display:flex; gap:12px; flex-wrap:wrap; margin-bottom:26px;
+  }
+  .filter-chip{
+    background:var(--white); border:1px solid var(--line); border-radius:999px;
+    padding:9px 18px; font-weight:700; font-size:.85rem; cursor:pointer; color:var(--muted);
+    transition:all .2s;
+  }
+  .filter-chip.active, .filter-chip:hover{
+    background:var(--deep); border-color:var(--deep); color:var(--white);
+  }
+
+  /* ---------- Worker cards ---------- */
+  .workers-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
+  }
+  .worker-card{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px; display:flex; flex-direction:column; gap:14px;
+    transition:box-shadow .2s, transform .2s;
+  }
+  .worker-card:hover{ box-shadow:0 14px 30px -14px rgba(14,59,57,.25); transform:translateY(-3px); }
+  .worker-top{ display:flex; align-items:center; gap:14px; }
+  .avatar{
+    width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-family:'Cairo',sans-serif; font-weight:800; color:var(--white); font-size:1.2rem; flex-shrink:0;
+  }
+  .worker-name{ font-family:'Cairo',sans-serif; font-weight:800; font-size:1.05rem; }
+  .worker-area{ color:var(--muted); font-size:.82rem; }
+  .worker-rating{ display:flex; align-items:center; gap:5px; font-size:.85rem; color:var(--amber-dark); font-weight:700; }
+  .worker-tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{
+    background:var(--teal-light); color:var(--teal); border-radius:999px; padding:4px 10px;
+    font-size:.75rem; font-weight:700;
+  }
+  .worker-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:10px; border-top:1px dashed var(--line); }
+  .price{ font-family:'Cairo',sans-serif; font-weight:800; color:var(--deep); }
+  .price small{ font-family:'Tajawal',sans-serif; font-weight:500; color:var(--muted); font-size:.75rem; }
+  .btn-book{
+    background:var(--teal); color:var(--white); border:none; border-radius:999px;
+    padding:9px 18px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:.85rem;
+    cursor:pointer; transition:background .2s;
+  }
+  .btn-book:hover{ background:var(--deep); }
+
+  /* ---------- Booking panel ---------- */
+  .booking-panel{
+    background:var(--deep); border-radius:28px; padding:38px; color:var(--white);
+    display:grid; grid-template-columns:1fr 1fr; gap:36px;
+  }
+  .booking-panel .section-head p{ color:#B9D6D2; }
+  .booking-panel .section-head h2{ color:var(--white); }
+  .empty-state{
+    background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.25); border-radius:18px;
+    padding:40px 24px; text-align:center; color:#CFE6E3; grid-column:1 / -1;
+  }
+  .empty-state strong{ display:block; font-family:'Cairo',sans-serif; color:var(--white); margin-bottom:6px; font-size:1.1rem; }
+
+  .picked-worker{
+    display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.06);
+    border-radius:16px; padding:14px; margin-bottom:20px;
+  }
+  .picked-worker .worker-name{ color:var(--white); }
+  .picked-worker .worker-area{ color:#B9D6D2; }
+
+  .date-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:22px; }
+  .date-pill{
+    flex:0 0 auto; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+    border-radius:14px; padding:10px 14px; text-align:center; cursor:pointer; min-width:64px;
+    transition:all .2s;
+  }
+  .date-pill .d{ font-size:.72rem; color:#B9D6D2; }
+  .date-pill .n{ font-family:'Cairo',sans-serif; font-weight:800; font-size:1.1rem; }
+  .date-pill.active{ background:var(--amber); border-color:var(--amber); color:var(--deep); }
+  .date-pill.active .d{ color:var(--deep); }
+
+  .dial-wrap{ display:flex; justify-content:center; margin-bottom:18px; }
+  .hour-dial{ width:100%; max-width:320px; }
+  .hseg{ cursor:pointer; transition:fill .2s, opacity .2s; }
+  .hseg.taken{ cursor:not-allowed; }
+  .hseg-label{ font-family:'Tajawal',sans-serif; font-weight:700; pointer-events:none; }
+
+  .legend{ display:flex; gap:16px; justify-content:center; font-size:.78rem; color:#B9D6D2; margin-bottom:24px; flex-wrap:wrap; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+  .summary{
+    background:rgba(255,255,255,.06); border-radius:16px; padding:20px; margin-bottom:18px;
+  }
+  .summary-row{ display:flex; justify-content:space-between; font-size:.9rem; padding:6px 0; color:#DDEEEC; }
+  .summary-row.total{ border-top:1px solid rgba(255,255,255,.2); margin-top:8px; padding-top:12px; font-family:'Cairo',sans-serif; font-weight:800; font-size:1.15rem; color:var(--white); }
+  .hint{ font-size:.8rem; color:#F7C77C; min-height:18px; margin-bottom:10px;}
+  .btn-confirm{
+    width:100%; background:var(--amber); color:var(--deep); border:none; border-radius:14px;
+    padding:15px; font-family:'Cairo',sans-serif; font-weight:800; font-size:1.02rem; cursor:pointer;
+    transition:transform .15s;
+  }
+  .btn-confirm:hover{ transform:translateY(-2px); }
+  .btn-confirm:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+
+  /* ---------- Bookings list ---------- */
+  .bookings-list{ display:flex; flex-direction:column; gap:14px; }
+  .booking-row{
+    background:var(--white); border:1px solid var(--line); border-radius:16px;
+    padding:18px 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .booking-row .bk-left{ display:flex; align-items:center; gap:14px; }
+  .status-badge{
+    background:#E9F7EE; color:#1E8A4C; font-weight:700; font-size:.78rem; border-radius:999px; padding:5px 12px;
+  }
+  .btn-cancel{
+    background:transparent; border:1px solid var(--danger); color:var(--danger); border-radius:999px;
+    padding:8px 16px; font-weight:700; font-size:.82rem; cursor:pointer; transition:background .2s;
+  }
+  .btn-cancel:hover{ background:var(--danger); color:var(--white); }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--deep); color:var(--white); padding:14px 26px; border-radius:999px;
+    font-weight:700; box-shadow:0 14px 30px -10px rgba(0,0,0,.4); opacity:0; pointer-events:none;
+    transition:opacity .3s, transform .3s; z-index:100; display:flex; align-items:center; gap:10px;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast .tick{ color:var(--amber); font-weight:900; }
+
+  footer{
+    border-top:1px solid var(--line); padding:30px 0; text-align:center; color:var(--muted); font-size:.85rem;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 880px){
+    .hero{ grid-template-columns:1fr; }
+    .steps{ grid-template-columns:1fr; }
+    .workers-grid{ grid-template-columns:1fr 1fr; }
+    .booking-panel{ grid-template-columns:1fr; }
+    .nav-links{ display:none; }
+  }
+  @media (max-width: 560px){
+    .workers-grid{ grid-template-columns:1fr; }
+    .hero-stats{ flex-wrap:wrap; gap:18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; scroll-behavior:auto !important; }
+  }
+
+  :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="container nav">
+    <div class="brand"><span class="dot"></span> ساعة</div>
+    <ul class="nav-links">
+      <li><a href="#workers">العاملات</a></li>
+      <li><a href="#how">كيف تعمل</a></li>
+      <li><a href="#booking">الحجز</a></li>
+      <li><a href="#bookings">حجوزاتي</a></li>
+      <li><a href="admin-bookings.html" target="_blank" rel="noopener">لوحة الإدارة</a></li>
+    </ul>
+    <button class="nav-cta" onclick="document.getElementById('workers').scrollIntoView()">احجزي الآن</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div>
+      <div class="eyebrow">نظام حجز بالساعة</div>
+      <h1>نظّفي بيتك <span>بالساعة</span>، من غير التزام يومي كامل</h1>
+      <p class="lead">اختاري عاملة النظافة المناسبة، وحدّدي عدد الساعات اللي تحتاجينها من مؤشر الساعة، وأكدي حجزك خلال دقيقة.</p>
+      <div class="hero-ctas">
+        <button class="btn-primary" onclick="document.getElementById('workers').scrollIntoView()">شوفي العاملات المتاحات</button>
+        <button class="btn-ghost" onclick="document.getElementById('how').scrollIntoView()">كيف يعمل النظام؟</button>
+      </div>
+      <div class="hero-stats">
+        <div><strong id="statWorkers">0</strong><span>عاملة متاحة</span></div>
+        <div><strong>٣.٠٠٠ د.ب</strong><span>ابتداءً من / ساعة</span></div>
+        <div><strong>٢٤/٧</strong><span>حجز أونلاين</span></div>
+      </div>
+    </div>
+    <div class="clock-wrap">
+      <svg class="clock-face" id="heroClock" viewBox="0 0 300 300"></svg>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how">
+    <div class="section-head">
+      <div class="eyebrow">٣ خطوات بسيطة</div>
+      <h2>من الاختيار للتأكيد بدقايق</h2>
+      <p>ما فيه اشتراك شهري ولا التزام طويل — بس الساعات اللي تحتاجينها فعليًا.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="num">01</span><h3>اختاري العاملة</h3><p>تصفحي الملفات، شوفي التقييمات والمناطق اللي تغطيها كل عاملة، واختاري الأنسب لبيتك.</p></div>
+      <div class="step"><span class="num">02</span><h3>حددي الساعات على المؤشر</h3><p>اضغطي على الساعات اللي تناسبك من مؤشر الساعة الدائري، وشوفي السعر الإجمالي يتحدث فورًا.</p></div>
+      <div class="step"><span class="num">03</span><h3>أكدي الحجز</h3><p>راجعي التفاصيل واضغطي تأكيد — بيوصلك الحجز في قائمة "حجوزاتي" فورًا.</p></div>
+    </div>
+  </section>
+
+  <!-- Workers -->
+  <section id="workers">
+    <div class="section-head">
+      <div class="eyebrow">العاملات</div>
+      <h2>اختاري من عاملات موثوقات وقريبات منك</h2>
+      <p>فلتري حسب المنطقة أو نوع الخدمة اللي تحتاجينها.</p>
+    </div>
+    <div class="filters" id="areaFilters"></div>
+    <div class="workers-grid" id="workersGrid"></div>
+  </section>
+
+  <!-- Booking -->
+  <section id="booking">
+    <div class="section-head">
+      <div class="eyebrow">الحجز بالساعة</div>
+      <h2>حددي موعدك</h2>
+      <p>اضغطي على قطاعات الساعة اللي تناسبك — القطاعات الرمادية تعني إنها محجوزة مسبقًا.</p>
+    </div>
+    <div class="booking-panel" id="bookingPanel">
+      <div class="empty-state" id="bookingEmpty">
+        <strong>ما اخترتي عاملة بعد</strong>
+        اختاري عاملة من قسم "العاملات" فوق عشان تقدري تحددي موعدك.
+      </div>
+    </div>
+  </section>
+
+  <!-- My bookings -->
+  <section id="bookings">
+    <div class="section-head">
+      <div class="eyebrow">حجوزاتي</div>
+      <h2>الحجوزات المؤكدة</h2>
+      <p>تقدرين تلغي أي حجز قبل موعده.</p>
+    </div>
+    <div class="bookings-list" id="bookingsList">
+      <div class="empty-state" style="color:var(--muted); border-color:var(--line); background:var(--white);">
+        <strong style="color:var(--deep);">ما فيه حجوزات لسه</strong>
+        حجوزاتك بتظهر هنا أول ما تأكدي أول موعد.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">ساعة — منصة حجز عاملات نظافة بالساعة · هذا نموذج تجريبي لأغراض العرض فقط</div>
+</footer>
+
+<div class="toast" id="toast"><span class="tick">✓</span><span id="toastMsg"></span></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Data ---------------- */
+  const AREAS = ["الكل","المنامة","الرفاع","حمد","سترة","عيسى تاون"];
+
+  const WORKERS = [
+    { id:1, name:"فاطمة العلي", area:"المنامة", rating:4.9, reviews:132, price:3.5, tags:["تنظيف عميق","نوافذ"], color:"#2F9E8F", initials:"ف ع" },
+    { id:2, name:"مريم حسن", area:"الرفاع", rating:4.8, reviews:98, price:3.0, tags:["غسيل ملابس","كي"], color:"#F2A20C", initials:"م ح" },
+    { id:3, name:"سارة يوسف", area:"حمد", rating:5.0, reviews:210, price:4.0, tags:["تنظيف عميق","مطبخ"], color:"#C9503D", initials:"س ي" },
+    { id:4, name:"نورة سالم", area:"سترة", rating:4.7, reviews:76, price:3.25, tags:["حضانة أطفال","تنظيف عام"], color:"#0E3B39", initials:"ن س" },
+    { id:5, name:"هند عبدالله", area:"عيسى تاون", rating:4.9, reviews:154, price:3.75, tags:["نوافذ","تنظيف عام"], color:"#2F9E8F", initials:"ه ع" },
+    { id:6, name:"ريم خالد", area:"المنامة", rating:4.6, reviews:64, price:2.9, tags:["تنظيف عام"], color:"#F2A20C", initials:"ر خ" },
+  ];
+
+  const START_HOUR = 8;   // 8:00
+  const END_HOUR = 20;    // 20:00 (12 hourly segments)
+  const HOURS = Array.from({length: END_HOUR - START_HOUR}, (_, i) => START_HOUR + i);
+
+  const WEEKDAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+
+  function nextDays(n){
+    const out = [];
+    const base = new Date();
+    for(let i=0;i<n;i++){
+      const d = new Date(base);
+      d.setDate(base.getDate()+i);
+      out.push(d);
+    }
+    return out;
+  }
+  const DATES = nextDays(7);
+
+  // Deterministic mock "already booked" hours per worker+date, so the demo feels real.
+  function seededRandom(seed){
+    let x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+  function isHourTaken(workerId, dateIndex, hour){
+    const seed = workerId * 977 + dateIndex * 131 + hour * 17;
+    return seededRandom(seed) < 0.22;
+  }
+
+  /* ---------------- State ---------------- */
+  const state = {
+    areaFilter: "الكل",
+    selectedWorkerId: null,
+    selectedDateIndex: 0,
+    selectedHours: new Set(),
+    bookings: [] // {id, ref, workerId, workerName, workerArea, dateIndex, dateISO, hours:[...], total, status, createdAt}
+  };
+  let bookingCounter = 1;
+
+  /* ---------------- Shared storage (read by admin-bookings.html) ---------------- */
+  const STORAGE_KEY = "saa_bookings_v1";
+  const COUNTER_KEY = "saa_booking_counter_v1";
+
+  function loadBookings(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      state.bookings = raw ? JSON.parse(raw) : [];
+      const savedCounter = Number(localStorage.getItem(COUNTER_KEY));
+      bookingCounter = savedCounter && savedCounter > bookingCounter ? savedCounter : bookingCounter;
+    }catch(e){
+      state.bookings = [];
+    }
+  }
+  function saveBookings(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bookings));
+      localStorage.setItem(COUNTER_KEY, String(bookingCounter));
+    }catch(e){ /* storage unavailable — booking still works for this session */ }
+  }
+  function fmtRef(id){
+    return "SA-" + String(id).padStart(5,"0");
+  }
+
+  /* ---------------- Helpers ---------------- */
+  function fmtHour(h){
+    const period = h < 12 ? "ص" : "م";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ":00 " + period;
+  }
+  function fmtDate(d){
+    return WEEKDAYS[d.getDay()] + " " + d.getDate() + "/" + (d.getMonth()+1);
+  }
+  function fmtPrice(p){
+    return p.toFixed(3) + " د.ب";
+  }
+  function starString(rating){
+    return "★ " + rating.toFixed(1);
+  }
+
+  /* ---------------- Hero clock (decorative, animated) ---------------- */
+  function buildHeroClock(){
+    const svg = document.getElementById('heroClock');
+    const cx=150, cy=150, rOuter=130, rInner=78;
+    const segCount = 12;
+    let paths = "";
+    for(let i=0;i<segCount;i++){
+      const a0 = (i/segCount) * 2*Math.PI - Math.PI/2;
+      const a1 = ((i+1)/segCount) * 2*Math.PI - Math.PI/2;
+      const x0o = cx + rOuter*Math.cos(a0), y0o = cy + rOuter*Math.sin(a0);
+      const x1o = cx + rOuter*Math.cos(a1), y1o = cy + rOuter*Math.sin(a1);
+      const x0i = cx + rInner*Math.cos(a1), y0i = cy + rInner*Math.sin(a1);
+      const x1i = cx + rInner*Math.cos(a0), y1i = cy + rInner*Math.sin(a0);
+      const d = `M ${x0o} ${y0o} A ${rOuter} ${rOuter} 0 0 1 ${x1o} ${y1o} L ${x0i} ${y0i} A ${rInner} ${rInner} 0 0 0 ${x1i} ${y1i} Z`;
+      paths += `<path class="seg" d="${d}" fill="#E6F3F1" opacity="0.9" data-i="${i}"></path>`;
+    }
+    svg.innerHTML = paths + `
+      <circle cx="${cx}" cy="${cy}" r="${rInner-4}" fill="#0E3B39"></circle>
+      <text x="${cx}" y="${cy-6}" text-anchor="middle" class="clock-center-text" font-size="15" fill="#B9D6D2">متاحة اليوم</text>
+      <text id="heroClockCount" x="${cx}" y="${cy+22}" text-anchor="middle" class="clock-center-text" font-size="30" font-weight="900" fill="#ffffff">0</text>
+    `;
+    // animate segments filling in with teal/amber to suggest "hours filling up"
+    let i = 0;
+    const colors = ["#2F9E8F","#2F9E8F","#2F9E8F","#F2A20C"];
+    const timer = setInterval(()=>{
+      const seg = svg.querySelector(`.seg[data-i="${i % segCount}"]`);
+      if(seg){ seg.setAttribute('fill', colors[i % colors.length]); }
+      i++;
+      const countEl = document.getElementById('heroClockCount');
+      if(countEl) countEl.textContent = String(Math.min(i, segCount));
+      if(i >= segCount){ clearInterval(timer); }
+    }, 140);
+  }
+
+  /* ---------------- Filters ---------------- */
+  function renderFilters(){
+    const wrap = document.getElementById('areaFilters');
+    wrap.innerHTML = AREAS.map(a =>
+      `<button type="button" class="filter-chip ${a===state.areaFilter?'active':''}" data-area="${a}">${a}</button>`
+    ).join('');
+    wrap.querySelectorAll('.filter-chip').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        state.areaFilter = btn.dataset.area;
+        renderFilters();
+        renderWorkers();
+      });
+    });
+  }
+
+  /* ---------------- Workers grid ---------------- */
+  function renderWorkers(){
+    const grid = document.getElementById('workersGrid');
+    const list = WORKERS.filter(w => state.areaFilter === "الكل" || w.area === state.areaFilter);
+    document.getElementById('statWorkers').textContent = toArabicDigits(WORKERS.length);
+
+    if(list.length === 0){
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;color:var(--muted);border-color:var(--line);background:var(--white);"><strong style="color:var(--deep)">ما فيه عاملات بهذي المنطقة</strong>جربي منطقة ثانية.</div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map(w => `
+      <div class="worker-card">
+        <div class="worker-top">
+          <div class="avatar" style="background:${w.color}">${w.initials}</div>
+          <div>
+            <div class="worker-name">${w.name}</div>
+            <div class="worker-area">${w.area}</div>
+          </div>
+        </div>
+        <div class="worker-rating">${starString(w.rating)} <span style="color:var(--muted); font-weight:500;">(${toArabicDigits(w.reviews)} تقييم)</span></div>
+        <div class="worker-tags">${w.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        <div class="worker-bottom">
+          <div class="price">${fmtPrice(w.price)}<br><small>للساعة الواحدة</small></div>
+          <button type="button" class="btn-book" data-worker="${w.id}">احجزي الآن</button>
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.btn-book').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        state.selectedWorkerId = Number(btn.dataset.worker);
+        state.selectedHours = new Set();
+        renderBookingPanel();
+        document.getElementById('booking').scrollIntoView({behavior:'smooth'});
+      });
+    });
+  }
+
+  function toArabicDigits(n){
+    const map = {'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+    return String(n).replace(/[0-9]/g, d => map[d]);
+  }
+
+  /* ---------------- Booking panel ---------------- */
+  function renderBookingPanel(){
+    const panel = document.getElementById('bookingPanel');
+    const worker = WORKERS.find(w => w.id === state.selectedWorkerId);
+
+    if(!worker){
+      panel.innerHTML = `<div class="empty-state" id="bookingEmpty"><strong>ما اخترتي عاملة بعد</strong>اختاري عاملة من قسم "العاملات" فوق عشان تقدري تحددي موعدك.</div>`;
+      return;
+    }
+
+    panel.innerHTML = `
+      <div>
+        <div class="picked-worker">
+          <div class="avatar" style="background:${worker.color}">${worker.initials}</div>
+          <div>
+            <div class="worker-name">${worker.name}</div>
+            <div class="worker-area">${worker.area} · ${fmtPrice(worker.price)} / ساعة</div>
+          </div>
+        </div>
+        <div class="date-row" id="dateRow"></div>
+        <div class="dial-wrap"><svg class="hour-dial" id="hourDial" viewBox="0 0 300 300"></svg></div>
+        <div class="legend">
+          <span><i style="background:#2F9E8F"></i> متاحة</span>
+          <span><i style="background:#F2A20C"></i> مختارة</span>
+          <span><i style="background:#5B6B6A"></i> محجوزة</span>
+        </div>
+      </div>
+      <div>
+        <div class="summary" id="summaryBox"></div>
+        <div class="hint" id="bookingHint"></div>
+        <button type="button" class="btn-confirm" id="confirmBtn">تأكيد الحجز</button>
+      </div>
+    `;
+
+    renderDateRow(worker);
+    renderHourDial(worker);
+    renderSummary(worker);
+
+    document.getElementById('confirmBtn').addEventListener('click', ()=> confirmBooking(worker));
+  }
+
+  function renderDateRow(worker){
+    const row = document.getElementById('dateRow');
+    row.innerHTML = DATES.map((d,i)=>{
+      const parts = fmtDate(d).split(' ');
+      return `<div class="date-pill ${i===state.selectedDateIndex?'active':''}" data-i="${i}">
+        <div class="d">${parts[0]}</div><div class="n">${toArabicDigits(d.getDate())}</div>
+      </div>`;
+    }).join('');
+    row.querySelectorAll('.date-pill').forEach(pill=>{
+      pill.addEventListener('click', ()=>{
+        state.selectedDateIndex = Number(pill.dataset.i);
+        state.selectedHours = new Set();
+        renderDateRow(worker);
+        renderHourDial(worker);
+        renderSummary(worker);
+      });
+    });
+  }
+
+  function renderHourDial(worker){
+    const svg = document.getElementById('hourDial');
+    const cx=150, cy=150, rOuter=130, rInner=64;
+    const segCount = HOURS.length;
+    let content = "";
+    HOURS.forEach((hour, i) => {
+      const a0 = (i/segCount) * 2*Math.PI - Math.PI/2;
+      const a1 = ((i+1)/segCount) * 2*Math.PI - Math.PI/2;
+      const x0o = cx + rOuter*Math.cos(a0), y0o = cy + rOuter*Math.sin(a0);
+      const x1o = cx + rOuter*Math.cos(a1), y1o = cy + rOuter*Math.sin(a1);
+      const x0i = cx + rInner*Math.cos(a1), y0i = cy + rInner*Math.sin(a1);
+      const x1i = cx + rInner*Math.cos(a0), y1i = cy + rInner*Math.sin(a0);
+      const d = `M ${x0o} ${y0o} A ${rOuter} ${rOuter} 0 0 1 ${x1o} ${y1o} L ${x0i} ${y0i} A ${rInner} ${rInner} 0 0 0 ${x1i} ${y1i} Z`;
+
+      const taken = isHourTaken(worker.id, state.selectedDateIndex, hour);
+      const selected = state.selectedHours.has(hour);
+      let fill = "#E6F3F1";
+      if(taken) fill = "#5B6B6A";
+      else if(selected) fill = "#F2A20C";
+
+      const amid = (a0+a1)/2;
+      const lx = cx + ((rOuter+rInner)/2)*Math.cos(amid);
+      const ly = cy + ((rOuter+rInner)/2)*Math.sin(amid);
+
+      content += `<path class="hseg ${taken?'taken':''}" d="${d}" fill="${fill}" opacity="${taken?0.55:1}" data-hour="${hour}"></path>`;
+      content += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" class="hseg-label" font-size="11" fill="${selected? '#0E3B39':'#0E3B39'}">${toArabicDigits(hour)}</text>`;
+    });
+
+    content += `<circle cx="${cx}" cy="${cy}" r="${rInner-6}" fill="#ffffff" opacity="0.08"></circle>`;
+    content += `<text x="${cx}" y="${cy-4}" text-anchor="middle" class="clock-center-text" font-size="13" fill="#B9D6D2">الساعات المختارة</text>`;
+    content += `<text id="dialSelectedCount" x="${cx}" y="${cy+22}" text-anchor="middle" class="clock-center-text" font-size="28" font-weight="900" fill="#ffffff">${toArabicDigits(state.selectedHours.size)}</text>`;
+
+    svg.innerHTML = content;
+
+    svg.querySelectorAll('.hseg').forEach(seg=>{
+      seg.addEventListener('click', ()=>{
+        if(seg.classList.contains('taken')) return;
+        const hour = Number(seg.dataset.hour);
+        if(state.selectedHours.has(hour)) state.selectedHours.delete(hour);
+        else state.selectedHours.add(hour);
+        renderHourDial(worker);
+        renderSummary(worker);
+      });
+    });
+  }
+
+  function renderSummary(worker){
+    const box = document.getElementById('summaryBox');
+    const hours = Array.from(state.selectedHours).sort((a,b)=>a-b);
+    const total = hours.length * worker.price;
+    const dateLabel = fmtDate(DATES[state.selectedDateIndex]);
+
+    if(hours.length === 0){
+      box.innerHTML = `
+        <div class="summary-row"><span>التاريخ</span><span>${dateLabel}</span></div>
+        <div class="summary-row"><span>الساعات</span><span>لم تُحدد بعد</span></div>
+        <div class="summary-row total"><span>الإجمالي</span><span>${fmtPrice(0)}</span></div>
+      `;
+    } else {
+      const hoursLabel = hours.map(fmtHour).join(' · ');
+      box.innerHTML = `
+        <div class="summary-row"><span>التاريخ</span><span>${dateLabel}</span></div>
+        <div class="summary-row"><span>عدد الساعات</span><span>${toArabicDigits(hours.length)}</span></div>
+        <div class="summary-row"><span>الأوقات</span><span style="max-width:60%; text-align:left;">${hoursLabel}</span></div>
+        <div class="summary-row total"><span>الإجمالي</span><span>${fmtPrice(total)}</span></div>
+      `;
+    }
+
+    const hint = document.getElementById('bookingHint');
+    const confirmBtn = document.getElementById('confirmBtn');
+    if(hours.length === 0){
+      hint.textContent = "حددي ساعة وحدة على الأقل من مؤشر الساعة عشان تقدري تأكدي.";
+      confirmBtn.disabled = true;
+    } else {
+      hint.textContent = "";
+      confirmBtn.disabled = false;
+    }
+  }
+
+  function confirmBooking(worker){
+    const hours = Array.from(state.selectedHours).sort((a,b)=>a-b);
+    if(hours.length === 0) return;
+    const total = hours.length * worker.price;
+    const id = bookingCounter++;
+    const bookedDate = DATES[state.selectedDateIndex];
+    state.bookings.unshift({
+      id,
+      ref: fmtRef(id),
+      workerId: worker.id,
+      workerName: worker.name,
+      workerArea: worker.area,
+      workerColor: worker.color,
+      workerInitials: worker.initials,
+      pricePerHour: worker.price,
+      dateIndex: state.selectedDateIndex,
+      dateISO: bookedDate.toISOString().slice(0,10),
+      dateLabel: fmtDate(bookedDate),
+      hours,
+      total,
+      status: "confirmed",
+      createdAt: new Date().toISOString()
+    });
+    saveBookings();
+    state.selectedHours = new Set();
+    renderHourDial(worker);
+    renderSummary(worker);
+    renderBookingsList();
+    showToast(`تم تأكيد حجز ${worker.name} بنجاح`);
+    document.getElementById('bookings').scrollIntoView({behavior:'smooth'});
+  }
+
+  /* ---------------- Bookings list ---------------- */
+  function renderBookingsList(){
+    const wrap = document.getElementById('bookingsList');
+    const active = state.bookings.filter(b => b.status !== "cancelled");
+    if(active.length === 0){
+      wrap.innerHTML = `<div class="empty-state" style="color:var(--muted); border-color:var(--line); background:var(--white);">
+        <strong style="color:var(--deep);">ما فيه حجوزات لسه</strong>حجوزاتك بتظهر هنا أول ما تأكدي أول موعد.
+      </div>`;
+      return;
+    }
+    wrap.innerHTML = active.map(b => `
+      <div class="booking-row" data-id="${b.id}">
+        <div class="bk-left">
+          <div class="avatar" style="background:${b.workerColor}; width:44px; height:44px; font-size:1rem; border-radius:12px;">${b.workerInitials}</div>
+          <div>
+            <div class="worker-name">${b.workerName}</div>
+            <div class="worker-area">${fmtDate(DATES[b.dateIndex])} · ${b.hours.map(fmtHour).join(' · ')}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="price">${fmtPrice(b.total)}</div>
+          <span class="status-badge">مؤكد</span>
+          <button type="button" class="btn-cancel" data-id="${b.id}">إلغاء</button>
+        </div>
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('.btn-cancel').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = Number(btn.dataset.id);
+        const booking = state.bookings.find(b => b.id === id);
+        if(booking) booking.status = "cancelled";
+        saveBookings();
+        renderBookingsList();
+        showToast("تم إلغاء الحجز");
+      });
+    });
+  }
+
+  /* ---------------- Toast ---------------- */
+  let toastTimer = null;
+  function showToast(msg){
+    const toast = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> toast.classList.remove('show'), 2600);
+  }
+
+  /* ---------------- Init ---------------- */
+  function init(){
+    loadBookings();
+    buildHeroClock();
+    renderFilters();
+    renderWorkers();
+    renderBookingPanel();
+    renderBookingsList();
+  }
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
