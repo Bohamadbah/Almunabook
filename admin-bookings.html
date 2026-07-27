@@ -180,6 +180,26 @@
   .modal-actions{ display:flex; gap:10px; padding:0 24px 24px; }
   .modal-actions .btn{ flex:1; }
 
+  /* ---------- Worker management ---------- */
+  .worker-cell-name{ font-weight:700; font-size:.88rem; }
+  .tags-cell{ display:flex; flex-wrap:wrap; gap:6px; max-width:220px; }
+  .tag-pill{ background:var(--teal-light); color:var(--teal); border-radius:999px; padding:3px 10px; font-size:.74rem; font-weight:700; }
+  .rating-cell{ color:var(--amber-dark); font-weight:700; }
+
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:.82rem; font-weight:700; color:var(--muted); }
+  .field input{
+    font-family:'Tajawal',sans-serif; border:1px solid var(--line); border-radius:12px; padding:10px 14px;
+    font-size:.9rem; color:var(--deep); background:var(--bg); outline:none; transition:border-color .2s;
+  }
+  .field input:focus{ border-color:var(--teal); }
+  .color-swatches{ display:flex; gap:10px; flex-wrap:wrap; }
+  .color-swatch{
+    width:32px; height:32px; border-radius:10px; cursor:pointer; border:2px solid transparent; transition:transform .15s, border-color .2s;
+  }
+  .color-swatch:hover{ transform:translateY(-2px); }
+  .color-swatch.selected{ border-color:var(--deep); }
+
   /* ---------- Print ---------- */
   #printArea{ display:none; }
   .print-title{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; margin-bottom:4px; }
@@ -271,6 +291,32 @@
     </table>
     <div class="table-foot" id="tableFoot"></div>
   </div>
+
+  <!-- Workers management -->
+  <div class="page-head" style="margin-top:44px;">
+    <div>
+      <h1 style="font-size:clamp(1.3rem,2.2vw,1.7rem);">إدارة العاملات</h1>
+      <p>عدّلي الأسماء والمناطق والأسعار — التعديلات تظهر مباشرة في صفحة الحجز.</p>
+    </div>
+    <button class="btn btn-amber" id="addWorkerBtn">+ إضافة عاملة</button>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>العاملة</th>
+          <th>المنطقة</th>
+          <th>السعر / ساعة</th>
+          <th>التقييم</th>
+          <th>الخدمات</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="workersTbody"></tbody>
+    </table>
+    <div class="table-foot" id="workersFoot"></div>
+  </div>
 </main>
 
 <!-- Preview modal -->
@@ -288,6 +334,48 @@
   </div>
 </div>
 
+<!-- Worker add/edit modal -->
+<div class="modal-overlay" id="workerModalOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <div class="brand-mini"><span class="dot"></span> <span id="workerModalTitle">إضافة عاملة</span></div>
+      <button class="modal-close" id="workerModalCloseBtn">✕</button>
+    </div>
+    <form id="workerForm" class="receipt-body" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="field">
+        <label for="wName">الاسم</label>
+        <input type="text" id="wName" required placeholder="مثال: فاطمة العلي">
+      </div>
+      <div class="field">
+        <label for="wArea">المنطقة</label>
+        <input type="text" id="wArea" required placeholder="مثال: المنامة" list="areaSuggestions">
+        <datalist id="areaSuggestions"></datalist>
+      </div>
+      <div class="field">
+        <label for="wPrice">السعر للساعة الواحدة (د.ب)</label>
+        <input type="number" id="wPrice" required min="0" step="0.001" placeholder="مثال: 3.500">
+      </div>
+      <div class="field">
+        <label for="wRating">التقييم (اختياري، من ٥)</label>
+        <input type="number" id="wRating" min="0" max="5" step="0.1" placeholder="مثال: 4.8">
+      </div>
+      <div class="field">
+        <label for="wTags">الخدمات (افصلي بينها بفاصلة)</label>
+        <input type="text" id="wTags" placeholder="مثال: تنظيف عميق، نوافذ">
+      </div>
+      <div class="field">
+        <label>اللون المميز</label>
+        <div class="color-swatches" id="colorSwatches"></div>
+      </div>
+      <input type="hidden" id="wId">
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="workerCancelBtn" type="button">إلغاء</button>
+      <button class="btn btn-teal" id="workerSaveBtn" type="submit" form="workerForm">حفظ</button>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden print-only containers -->
 <div id="printArea">
   <div id="printReport"></div>
@@ -297,15 +385,53 @@
 <script>
 (() => {
   const STORAGE_KEY = "saa_bookings_v1";
+  const WORKERS_STORAGE_KEY = "saa_workers_v1";
+  const COLOR_PALETTE = ["#2F9E8F","#F2A20C","#0E3B39","#C9503D","#3E7CB1","#8A5FBF"];
+
+  const DEFAULT_WORKERS = [
+    { id:1, name:"فاطمة العلي", area:"المنامة", rating:4.9, reviews:132, price:3.5, tags:["تنظيف عميق","نوافذ"], color:"#2F9E8F", initials:"ف ع" },
+    { id:2, name:"مريم حسن", area:"الرفاع", rating:4.8, reviews:98, price:3.0, tags:["غسيل ملابس","كي"], color:"#F2A20C", initials:"م ح" },
+    { id:3, name:"سارة يوسف", area:"حمد", rating:5.0, reviews:210, price:4.0, tags:["تنظيف عميق","مطبخ"], color:"#C9503D", initials:"س ي" },
+    { id:4, name:"نورة سالم", area:"سترة", rating:4.7, reviews:76, price:3.25, tags:["حضانة أطفال","تنظيف عام"], color:"#0E3B39", initials:"ن س" },
+    { id:5, name:"هند عبدالله", area:"عيسى تاون", rating:4.9, reviews:154, price:3.75, tags:["نوافذ","تنظيف عام"], color:"#2F9E8F", initials:"ه ع" },
+    { id:6, name:"ريم خالد", area:"المنامة", rating:4.6, reviews:64, price:2.9, tags:["تنظيف عام"], color:"#F2A20C", initials:"ر خ" },
+  ];
 
   const state = {
     bookings: [],
+    workers: [],
     search: "",
     status: "all",
     worker: "all",
     sort: "new",
-    previewId: null
+    previewId: null,
+    editingWorkerId: null,
+    selectedColor: COLOR_PALETTE[0]
   };
+
+  function loadWorkers(){
+    try{
+      const raw = localStorage.getItem(WORKERS_STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state.workers = Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WORKERS;
+      } else {
+        state.workers = DEFAULT_WORKERS;
+        localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers));
+      }
+    }catch(e){
+      state.workers = DEFAULT_WORKERS;
+    }
+  }
+  function saveWorkers(){
+    try{ localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers)); }catch(e){}
+  }
+  function initialsFromName(name){
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if(parts.length === 0) return "؟";
+    if(parts.length === 1) return parts[0].slice(0,2);
+    return parts[0][0] + " " + parts[1][0];
+  }
 
   function loadBookings(){
     try{
@@ -448,7 +574,145 @@
     renderStats();
     renderWorkerFilterOptions();
     renderTable();
+    renderWorkersTable();
   }
+
+  /* ---------------- Workers table ---------------- */
+  function renderWorkersTable(){
+    const tbody = document.getElementById('workersTbody');
+    const foot = document.getElementById('workersFoot');
+    if(state.workers.length === 0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">
+        <strong>ما فيه عاملات مضافات</strong>
+        اضغطي "إضافة عاملة" عشان تبدئي.
+      </td></tr>`;
+      foot.textContent = "";
+      return;
+    }
+    tbody.innerHTML = state.workers.map(w => `
+      <tr>
+        <td>
+          <div class="worker-cell">
+            <div class="avatar-sm" style="background:${w.color || '#2F9E8F'}">${w.initials || initialsFromName(w.name)}</div>
+            <div class="worker-cell-name">${w.name}</div>
+          </div>
+        </td>
+        <td>${w.area}</td>
+        <td class="total-cell">${fmtPrice(w.price)}</td>
+        <td class="rating-cell">${w.rating ? '★ ' + Number(w.rating).toFixed(1) : '—'}</td>
+        <td><div class="tags-cell">${(w.tags||[]).map(t => `<span class="tag-pill">${t}</span>`).join('') || '—'}</div></td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-ghost small" data-edit-worker="${w.id}">تعديل</button>
+            <button class="btn btn-danger-outline small" data-delete-worker="${w.id}">حذف</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    foot.textContent = `${toArabicDigits(state.workers.length)} عاملة`;
+
+    tbody.querySelectorAll('[data-edit-worker]').forEach(btn=>{
+      btn.addEventListener('click', ()=> openWorkerModal(Number(btn.dataset.editWorker)));
+    });
+    tbody.querySelectorAll('[data-delete-worker]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteWorker(Number(btn.dataset.deleteWorker)));
+    });
+  }
+
+  function renderColorSwatches(){
+    const wrap = document.getElementById('colorSwatches');
+    wrap.innerHTML = COLOR_PALETTE.map(c => `
+      <div class="color-swatch ${c === state.selectedColor ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>
+    `).join('');
+    wrap.querySelectorAll('.color-swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        state.selectedColor = sw.dataset.color;
+        renderColorSwatches();
+      });
+    });
+  }
+
+  function openWorkerModal(id){
+    const isEdit = id != null;
+    state.editingWorkerId = isEdit ? id : null;
+    document.getElementById('workerModalTitle').textContent = isEdit ? "تعديل بيانات العاملة" : "إضافة عاملة";
+
+    const areaList = document.getElementById('areaSuggestions');
+    areaList.innerHTML = Array.from(new Set(state.workers.map(w => w.area))).map(a => `<option value="${a}">`).join('');
+
+    if(isEdit){
+      const w = state.workers.find(x => x.id === id);
+      document.getElementById('wId').value = w.id;
+      document.getElementById('wName').value = w.name;
+      document.getElementById('wArea').value = w.area;
+      document.getElementById('wPrice').value = w.price;
+      document.getElementById('wRating').value = w.rating || "";
+      document.getElementById('wTags').value = (w.tags || []).join('، ');
+      state.selectedColor = w.color || COLOR_PALETTE[0];
+    } else {
+      document.getElementById('workerForm').reset();
+      document.getElementById('wId').value = "";
+      state.selectedColor = COLOR_PALETTE[state.workers.length % COLOR_PALETTE.length];
+    }
+    renderColorSwatches();
+    document.getElementById('workerModalOverlay').classList.add('open');
+    document.getElementById('wName').focus();
+  }
+  function closeWorkerModal(){
+    document.getElementById('workerModalOverlay').classList.remove('open');
+    state.editingWorkerId = null;
+  }
+
+  function deleteWorker(id){
+    const w = state.workers.find(x => x.id === id);
+    if(!w) return;
+    if(!confirm(`تأكيد حذف "${w.name}"؟ لن تظهر بعدها في صفحة الحجز.`)) return;
+    state.workers = state.workers.filter(x => x.id !== id);
+    saveWorkers();
+    renderWorkersTable();
+    renderWorkerFilterOptions();
+  }
+
+  document.getElementById('addWorkerBtn').addEventListener('click', ()=> openWorkerModal(null));
+  document.getElementById('workerModalCloseBtn').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerCancelBtn').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerModalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'workerModalOverlay') closeWorkerModal();
+  });
+
+  document.getElementById('workerForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('wName').value.trim();
+    const area = document.getElementById('wArea').value.trim();
+    const price = parseFloat(document.getElementById('wPrice').value);
+    const ratingRaw = document.getElementById('wRating').value;
+    const rating = ratingRaw ? parseFloat(ratingRaw) : null;
+    const tags = document.getElementById('wTags').value.split(/[،,]/).map(t => t.trim()).filter(Boolean);
+    const idField = document.getElementById('wId').value;
+
+    if(!name || !area || isNaN(price)){
+      alert("الاسم والمنطقة والسعر مطلوبين.");
+      return;
+    }
+
+    if(idField){
+      const w = state.workers.find(x => x.id === Number(idField));
+      if(w){
+        w.name = name; w.area = area; w.price = price; w.rating = rating;
+        w.tags = tags; w.color = state.selectedColor; w.initials = initialsFromName(name);
+      }
+    } else {
+      const nextId = state.workers.length ? Math.max(...state.workers.map(w => w.id)) + 1 : 1;
+      state.workers.push({
+        id: nextId, name, area, price, rating, reviews: 0, tags,
+        color: state.selectedColor, initials: initialsFromName(name)
+      });
+    }
+    saveWorkers();
+    renderWorkersTable();
+    renderWorkerFilterOptions();
+    closeWorkerModal();
+  });
 
   /* ---------------- Preview modal ---------------- */
   function receiptHTML(b){
@@ -576,6 +840,7 @@
   });
   document.getElementById('refreshBtn').addEventListener('click', ()=>{
     loadBookings();
+    loadWorkers();
     renderAll();
   });
 
@@ -584,10 +849,15 @@
       loadBookings();
       renderAll();
     }
+    if(e.key === WORKERS_STORAGE_KEY){
+      loadWorkers();
+      renderAll();
+    }
   });
 
   /* ---------------- Init ---------------- */
   loadBookings();
+  loadWorkers();
   renderAll();
 })();
 </script>

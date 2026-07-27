@@ -399,9 +399,9 @@
   "use strict";
 
   /* ---------------- Data ---------------- */
-  const AREAS = ["الكل","المنامة","الرفاع","حمد","سترة","عيسى تاون"];
+  const WORKERS_STORAGE_KEY = "saa_workers_v1";
 
-  const WORKERS = [
+  const DEFAULT_WORKERS = [
     { id:1, name:"فاطمة العلي", area:"المنامة", rating:4.9, reviews:132, price:3.5, tags:["تنظيف عميق","نوافذ"], color:"#2F9E8F", initials:"ف ع" },
     { id:2, name:"مريم حسن", area:"الرفاع", rating:4.8, reviews:98, price:3.0, tags:["غسيل ملابس","كي"], color:"#F2A20C", initials:"م ح" },
     { id:3, name:"سارة يوسف", area:"حمد", rating:5.0, reviews:210, price:4.0, tags:["تنظيف عميق","مطبخ"], color:"#C9503D", initials:"س ي" },
@@ -409,6 +409,22 @@
     { id:5, name:"هند عبدالله", area:"عيسى تاون", rating:4.9, reviews:154, price:3.75, tags:["نوافذ","تنظيف عام"], color:"#2F9E8F", initials:"ه ع" },
     { id:6, name:"ريم خالد", area:"المنامة", rating:4.6, reviews:64, price:2.9, tags:["تنظيف عام"], color:"#F2A20C", initials:"ر خ" },
   ];
+
+  let WORKERS = [];
+  function loadWorkers(){
+    try{
+      const raw = localStorage.getItem(WORKERS_STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        WORKERS = Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WORKERS;
+      } else {
+        WORKERS = DEFAULT_WORKERS;
+        localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(WORKERS));
+      }
+    }catch(e){
+      WORKERS = DEFAULT_WORKERS;
+    }
+  }
 
   const START_HOUR = 8;   // 8:00
   const END_HOUR = 20;    // 20:00 (12 hourly segments)
@@ -523,9 +539,13 @@
   }
 
   /* ---------------- Filters ---------------- */
+  function getAreas(){
+    const unique = Array.from(new Set(WORKERS.map(w => w.area))).sort();
+    return ["الكل", ...unique];
+  }
   function renderFilters(){
     const wrap = document.getElementById('areaFilters');
-    wrap.innerHTML = AREAS.map(a =>
+    wrap.innerHTML = getAreas().map(a =>
       `<button type="button" class="filter-chip ${a===state.areaFilter?'active':''}" data-area="${a}">${a}</button>`
     ).join('');
     wrap.querySelectorAll('.filter-chip').forEach(btn=>{
@@ -803,6 +823,7 @@
 
   /* ---------------- Init ---------------- */
   function init(){
+    loadWorkers();
     loadBookings();
     buildHeroClock();
     renderFilters();
@@ -811,6 +832,23 @@
     renderBookingsList();
   }
   document.addEventListener('DOMContentLoaded', init);
+
+  window.addEventListener('storage', (e)=>{
+    if(e.key === WORKERS_STORAGE_KEY){
+      loadWorkers();
+      renderFilters();
+      renderWorkers();
+      // If the currently selected worker was edited/removed, refresh the booking panel too
+      if(state.selectedWorkerId && !WORKERS.find(w => w.id === state.selectedWorkerId)){
+        state.selectedWorkerId = null;
+      }
+      renderBookingPanel();
+    }
+    if(e.key === STORAGE_KEY){
+      loadBookings();
+      renderBookingsList();
+    }
+  });
 })();
 </script>
 </body>
