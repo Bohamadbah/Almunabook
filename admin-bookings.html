@@ -271,6 +271,7 @@
     <div class="spacer"></div>
     <button class="btn btn-ghost" id="refreshBtn">↻ تحديث</button>
     <button class="btn btn-amber" id="printListBtn">🖨 طباعة القائمة</button>
+    <button class="btn btn-danger-outline" id="clearAllBtn">🗑 مسح كل الحجوزات</button>
   </div>
 
   <div class="table-card">
@@ -555,6 +556,7 @@
           <div class="actions-cell">
             <button class="btn btn-ghost small" data-preview="${b.id}">معاينة</button>
             <button class="btn btn-teal small" data-print="${b.id}">🖨 طباعة</button>
+            <button class="btn btn-danger-outline small" data-delete="${b.id}">حذف نهائي</button>
           </div>
         </td>
       </tr>
@@ -568,6 +570,18 @@
     tbody.querySelectorAll('[data-print]').forEach(btn=>{
       btn.addEventListener('click', ()=> printReceipt(Number(btn.dataset.print)));
     });
+    tbody.querySelectorAll('[data-delete]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteBooking(Number(btn.dataset.delete)));
+    });
+  }
+
+  function deleteBooking(id){
+    const b = state.bookings.find(x => x.id === id);
+    if(!b) return;
+    if(!confirm(`تأكيد حذف الحجز ${b.ref || id} نهائيًا؟ ما يمكن التراجع عن هذا الإجراء.`)) return;
+    state.bookings = state.bookings.filter(x => x.id !== id);
+    saveBookings();
+    renderAll();
   }
 
   function renderAll(){
@@ -816,6 +830,14 @@
     window.print();
   }
   document.getElementById('printListBtn').addEventListener('click', printList);
+
+  document.getElementById('clearAllBtn').addEventListener('click', ()=>{
+    if(state.bookings.length === 0) return;
+    if(!confirm(`تأكيد حذف جميع الحجوزات (${state.bookings.length}) نهائيًا؟ هذا مفيد لتنظيف بيانات تجريبية، ولا يمكن التراجع عنه.`)) return;
+    state.bookings = [];
+    saveBookings();
+    renderAll();
+  });
 
   window.addEventListener('afterprint', ()=>{
     document.body.classList.remove('print-mode-list', 'print-mode-receipt');
