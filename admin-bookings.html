@@ -234,7 +234,7 @@
   @media (max-width: 620px){
     .stats-grid{ grid-template-columns:1fr; }
     .table-card{ overflow-x:auto; }
-    table{ min-width:760px; }
+    table{ min-width:920px; }
     .brand{ font-size:.8rem; gap:6px; }
     .brand img{ height:28px; }
   }
@@ -265,7 +265,7 @@
   <div class="stats-grid" id="statsGrid"></div>
 
   <div class="toolbar">
-    <input type="search" id="searchInput" placeholder="ابحثي برقم الحجز أو اسم العاملة…">
+    <input type="search" id="searchInput" placeholder="ابحثي برقم الحجز أو اسم العاملة أو اسم/جوال العميلة…">
     <select id="statusFilter">
       <option value="all">كل الحالات</option>
       <option value="confirmed">المؤكدة فقط</option>
@@ -290,6 +290,7 @@
       <thead>
         <tr>
           <th>رقم الحجز</th>
+          <th>العميلة</th>
           <th>العاملة</th>
           <th>التاريخ</th>
           <th>الساعات المحجوزة</th>
@@ -515,6 +516,8 @@
       list = list.filter(b =>
         (b.ref || "").toLowerCase().includes(q) ||
         (b.workerName || "").toLowerCase().includes(q) ||
+        (b.customerName || "").toLowerCase().includes(q) ||
+        (b.customerPhone || "").toLowerCase().includes(q) ||
         String(b.id).includes(q)
       );
     }
@@ -564,7 +567,7 @@
     const conflictIds = getConflictingIds();
 
     if(state.bookings.length === 0){
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">
         <strong>لا توجد حجوزات بعد</strong>
         الحجوزات التي يتم تأكيدها من <a href="cleaning-booking.html">صفحة الحجز</a> ستظهر هنا تلقائيًا.
       </td></tr>`;
@@ -572,7 +575,7 @@
       return;
     }
     if(list.length === 0){
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">
         <strong>ما فيه نتائج مطابقة</strong>
         جربي تعديل البحث أو الفلاتر.
       </td></tr>`;
@@ -585,6 +588,10 @@
       return `
       <tr class="${hasConflict ? 'conflict-row' : ''}">
         <td class="ref-cell">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
+        <td>
+          <div class="worker-name-sm">${b.customerName || '—'}</div>
+          <div class="worker-area-sm">${b.customerPhone || ''}</div>
+        </td>
         <td>
           <div class="worker-cell">
             <div class="avatar-sm" style="background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
@@ -789,6 +796,14 @@
         <div class="s"><span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span></div>
       </div>
       ${conflicts.length ? `<div class="conflict-banner">⚠ تعارض توقيت مع ${conflicts.map(c => c.ref || ("SA-"+String(c.id).padStart(5,"0"))).join('، ')} — نفس العاملة ونفس الساعات بنفس اليوم.</div>` : ''}
+      <div class="receipt-rows" style="margin-bottom:16px;">
+        <div class="receipt-row"><span>العميلة</span><span>${b.customerName || '—'}</span></div>
+        <div class="receipt-row"><span>رقم الجوال</span><span>${b.customerPhone || '—'}</span></div>
+        ${b.customerPhone2 ? `<div class="receipt-row"><span>جوال إضافي</span><span>${b.customerPhone2}</span></div>` : ''}
+        <div class="receipt-row"><span>العنوان</span><span style="white-space:pre-wrap;">${b.customerAddress || '—'}</span></div>
+        ${(b.customerLat && b.customerLng) ? `<div class="receipt-row"><span>الموقع</span><span><a href="https://www.google.com/maps?q=${b.customerLat},${b.customerLng}" target="_blank" rel="noopener">فتح على الخريطة</a></span></div>` : ''}
+        <div class="receipt-row"><span>الدفع</span><span>${b.paymentConfirmed ? `✓ مدفوع (${b.paymentMethod || 'بنفت'})` : 'غير مؤكد'}</span></div>
+      </div>
       <div class="receipt-worker">
         <div class="avatar-sm" style="width:46px;height:46px;font-size:1rem;background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
         <div>
@@ -873,6 +888,7 @@
     const rows = list.map(b => `
       <tr>
         <td>${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
+        <td>${b.customerName || '—'}${b.customerPhone ? " · " + b.customerPhone : ""}</td>
         <td>${b.workerName}${b.workerArea ? " · " + b.workerArea : ""}</td>
         <td>${b.dateLabel || ""}</td>
         <td>${(b.hours || []).map(fmtHour).join(' · ')}</td>
@@ -887,7 +903,7 @@
       <table class="print-table">
         <thead>
           <tr>
-            <th>رقم الحجز</th><th>العاملة</th><th>التاريخ</th><th>الساعات</th><th>الإجمالي</th><th>الحالة</th><th>أُنشئ في</th>
+            <th>رقم الحجز</th><th>العميلة</th><th>العاملة</th><th>التاريخ</th><th>الساعات</th><th>الإجمالي</th><th>الحالة</th><th>أُنشئ في</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

@@ -248,6 +248,7 @@
 
   @media (max-width: 480px){
     .time-slots{ grid-template-columns:1fr; }
+    .field-row{ flex-direction:column; gap:0; }
   }
 
   .legend{ display:flex; gap:16px; justify-content:center; font-size:.78rem; color:#B9D6D2; margin-bottom:24px; flex-wrap:wrap; }
@@ -257,6 +258,50 @@
   .summary{
     background:rgba(255,255,255,.06); border-radius:16px; padding:20px; margin-bottom:18px;
   }
+  .customer-form{ margin-bottom:18px; }
+  .customer-form .field-label{ display:block; font-size:.8rem; font-weight:700; color:#DDEEEC; margin-bottom:6px; }
+  .customer-form .field-group{ margin-bottom:14px; flex:1; }
+  .customer-form input, .customer-form textarea, .customer-form select{
+    width:100%; font-family:'Tajawal',sans-serif; font-size:.9rem; color:var(--deep);
+    background:var(--white); border:1px solid rgba(255,255,255,.2); border-radius:12px;
+    padding:11px 14px; outline:none; transition:box-shadow .2s;
+  }
+  .customer-form input:focus, .customer-form textarea:focus, .customer-form select:focus{ box-shadow:0 0 0 3px rgba(242,162,12,.35); }
+  .customer-form textarea{ resize:vertical; min-height:64px; }
+  .customer-form select{ cursor:pointer; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row.three .field-group{ flex:1; }
+
+  .btn-location{
+    width:100%; background:rgba(255,255,255,.08); border:1px dashed rgba(255,255,255,.3); color:var(--white);
+    border-radius:12px; padding:11px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:.85rem;
+    cursor:pointer; transition:all .2s; margin-bottom:8px;
+  }
+  .btn-location:hover:not(:disabled){ border-color:var(--teal); background:rgba(47,158,143,.2); }
+  .btn-location:disabled{ opacity:.6; cursor:wait; }
+  .location-status{ font-size:.8rem; min-height:16px; }
+  .location-status .ok{ color:#8EE6C8; font-weight:700; }
+  .location-status .ok a{ color:var(--amber); text-decoration:underline; }
+
+  .payment-box{
+    background:rgba(242,162,12,.1); border:1px solid rgba(242,162,12,.4); border-radius:16px;
+    padding:18px; margin-bottom:14px;
+  }
+  .payment-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:.95rem; color:var(--white); margin-bottom:6px; }
+  .payment-note{ font-size:.78rem; color:#DDEEEC; margin:0 0 12px; line-height:1.6; }
+  .pay-amount-row{ font-size:.85rem; color:#DDEEEC; margin-bottom:10px; }
+  .pay-amount-row strong{ color:var(--amber); font-family:'Cairo',sans-serif; }
+  .iban-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; margin-bottom:12px;
+  }
+  .iban-row span{ font-family:'Cairo',sans-serif; font-weight:700; font-size:.82rem; color:var(--white); direction:ltr; unicode-bidi:plaintext; }
+  .btn-copy{
+    background:var(--amber); color:var(--deep); border:none; border-radius:8px; padding:6px 14px;
+    font-family:'Tajawal',sans-serif; font-weight:700; font-size:.76rem; cursor:pointer; flex-shrink:0;
+  }
+  .pay-check{ display:flex; align-items:flex-start; gap:8px; font-size:.83rem; color:#DDEEEC; cursor:pointer; }
+  .pay-check input{ width:auto; margin-top:2px; accent-color:var(--amber); }
   .summary-row{ display:flex; justify-content:space-between; font-size:.9rem; padding:6px 0; color:#DDEEEC; }
   .summary-row.total{ border-top:1px solid rgba(255,255,255,.2); margin-top:8px; padding-top:12px; font-family:'Cairo',sans-serif; font-weight:800; font-size:1.15rem; color:var(--white); }
   .hint{ font-size:.8rem; color:#F7C77C; min-height:18px; margin-bottom:10px;}
@@ -465,6 +510,11 @@
   const HOURS = TIME_PERIODS.flatMap(p => p.hours);
   const MAX_DAILY_HOURS = 9;
 
+  // Service is only offered in these areas
+  const SERVICE_AREAS = ["مدينة حمد", "الزلاق", "صدد", "المالكية", "كرزكان", "دمستان"];
+
+  const BENEFIT_PAY_IBAN = "BH59ALSA00188102100100";
+
   const WEEKDAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
 
   function nextDays(n){
@@ -503,7 +553,8 @@
     selectedWorkerId: null,
     selectedDateIndex: 0,
     selectedHours: new Set(),
-    bookings: [] // {id, ref, workerId, workerName, workerArea, dateIndex, dateISO, hours:[...], total, status, createdAt}
+    customer: { name:"", phone:"", phone2:"", area:"", block:"", road:"", house:"", lat:null, lng:null, paymentConfirmed:false },
+    bookings: [] // {id, ref, workerId, workerName, workerArea, dateIndex, dateISO, hours:[...], total, status, createdAt, customerName, customerPhone, customerAddress}
   };
   let bookingCounter = 1;
 
@@ -529,6 +580,11 @@
   }
   function fmtRef(id){
     return "SA-" + String(id).padStart(5,"0");
+  }
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, ch => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[ch]));
   }
 
   /* ---------------- Helpers ---------------- */
@@ -675,7 +731,62 @@
         </div>
       </div>
       <div>
+        <div class="customer-form">
+          <div class="field-group">
+            <label class="field-label" for="custName">الاسم الكامل</label>
+            <input type="text" id="custName" placeholder="مثال: مريم أحمد" value="${escapeHtml(state.customer.name)}">
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label" for="custPhone">رقم الجوال الأول</label>
+              <input type="tel" id="custPhone" placeholder="مثال: 3xxxxxxx" value="${escapeHtml(state.customer.phone)}">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="custPhone2">رقم الجوال الثاني (اختياري)</label>
+              <input type="tel" id="custPhone2" placeholder="مثال: 3xxxxxxx" value="${escapeHtml(state.customer.phone2)}">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="custArea">منطقة السكن</label>
+            <select id="custArea">
+              <option value="" ${!state.customer.area ? 'selected' : ''} disabled>اختاري المنطقة</option>
+              ${SERVICE_AREAS.map(a => `<option value="${a}" ${state.customer.area===a?'selected':''}>${a}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field-row three">
+            <div class="field-group">
+              <label class="field-label" for="custBlock">مجمع</label>
+              <input type="text" inputmode="numeric" id="custBlock" placeholder="مثال: 405" value="${escapeHtml(state.customer.block)}">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="custRoad">طريق</label>
+              <input type="text" inputmode="numeric" id="custRoad" placeholder="مثال: 12" value="${escapeHtml(state.customer.road)}">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="custHouse">منزل</label>
+              <input type="text" inputmode="numeric" id="custHouse" placeholder="مثال: 7" value="${escapeHtml(state.customer.house)}">
+            </div>
+          </div>
+          <button type="button" class="btn-location" id="locateBtn">📍 استخدام موقعي الحالي (اختياري)</button>
+          <div class="location-status" id="locationStatus">${state.customer.lat ? `<span class="ok">✓ تم تحديد الموقع — <a href="https://www.google.com/maps?q=${state.customer.lat},${state.customer.lng}" target="_blank" rel="noopener">عرض على الخريطة</a></span>` : ''}</div>
+        </div>
+
         <div class="summary" id="summaryBox"></div>
+
+        <div class="payment-box">
+          <div class="payment-title">💳 الدفع عبر بنفت (BenefitPay)</div>
+          <p class="payment-note">حوّلي المبلغ الإجمالي على الآيبان التالي، ثم أكدي إنك حوّلتي عشان نقدر نأكد حجزك.</p>
+          <div class="pay-amount-row">المبلغ المطلوب: <strong id="payAmount">${fmtPrice(0)}</strong></div>
+          <div class="iban-row">
+            <span id="ibanText">${BENEFIT_PAY_IBAN}</span>
+            <button type="button" class="btn-copy" id="copyIbanBtn">نسخ</button>
+          </div>
+          <label class="pay-check">
+            <input type="checkbox" id="paidCheck" ${state.customer.paymentConfirmed ? 'checked' : ''}>
+            <span>حوّلت المبلغ عبر بنفت لهذا الحساب</span>
+          </label>
+        </div>
+
         <div class="hint" id="bookingHint"></div>
         <button type="button" class="btn-confirm" id="confirmBtn">تأكيد الحجز</button>
       </div>
@@ -684,6 +795,58 @@
     renderDateRow(worker);
     renderTimeSlots(worker);
     renderSummary(worker);
+
+    ['custName','custPhone','custPhone2','custBlock','custRoad','custHouse'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', (e)=>{
+        const keyMap = { custName:'name', custPhone:'phone', custPhone2:'phone2', custBlock:'block', custRoad:'road', custHouse:'house' };
+        state.customer[keyMap[id]] = e.target.value;
+        renderSummary(worker);
+      });
+    });
+    document.getElementById('custArea').addEventListener('change', (e)=>{
+      state.customer.area = e.target.value;
+      renderSummary(worker);
+    });
+
+    document.getElementById('locateBtn').addEventListener('click', ()=>{
+      if(!navigator.geolocation){
+        showToast("المتصفح ما يدعم تحديد الموقع");
+        return;
+      }
+      const btn = document.getElementById('locateBtn');
+      btn.disabled = true;
+      btn.textContent = "⏳ يتم تحديد الموقع...";
+      navigator.geolocation.getCurrentPosition(
+        (pos)=>{
+          state.customer.lat = pos.coords.latitude;
+          state.customer.lng = pos.coords.longitude;
+          btn.disabled = false;
+          btn.textContent = "📍 استخدام موقعي الحالي (اختياري)";
+          document.getElementById('locationStatus').innerHTML = `<span class="ok">✓ تم تحديد الموقع — <a href="https://www.google.com/maps?q=${state.customer.lat},${state.customer.lng}" target="_blank" rel="noopener">عرض على الخريطة</a></span>`;
+          showToast("تم تحديد موقعك بنجاح");
+        },
+        ()=>{
+          btn.disabled = false;
+          btn.textContent = "📍 استخدام موقعي الحالي (اختياري)";
+          showToast("ما قدرنا نحدد موقعك — تأكدي من صلاحية الموقع بالمتصفح");
+        }
+      );
+    });
+
+    document.getElementById('copyIbanBtn').addEventListener('click', ()=>{
+      const btn = document.getElementById('copyIbanBtn');
+      const finish = ()=>{ btn.textContent = "✓ تم النسخ"; setTimeout(()=> btn.textContent = "نسخ", 1800); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(BENEFIT_PAY_IBAN).then(finish).catch(finish);
+      } else {
+        finish();
+      }
+    });
+
+    document.getElementById('paidCheck').addEventListener('change', (e)=>{
+      state.customer.paymentConfirmed = e.target.checked;
+      renderSummary(worker);
+    });
 
     document.getElementById('confirmBtn').addEventListener('click', ()=> confirmBooking(worker));
   }
@@ -794,10 +957,22 @@
       `;
     }
 
+    const payAmountEl = document.getElementById('payAmount');
+    if(payAmountEl) payAmountEl.textContent = fmtPrice(total);
+
     const hint = document.getElementById('bookingHint');
     const confirmBtn = document.getElementById('confirmBtn');
+    const c = state.customer;
+    const hasContactInfo = c.name.trim() && c.phone.trim() && c.area && c.block.trim() && c.road.trim() && c.house.trim();
+
     if(hours.length === 0){
-      hint.textContent = "حددي ساعة وحدة على الأقل من فترات العمل عشان تقدري تأكدي.";
+      hint.textContent = "حددي فترة عمل وحدة على الأقل عشان تقدري تأكدي.";
+      confirmBtn.disabled = true;
+    } else if(!hasContactInfo){
+      hint.textContent = "عبّي الاسم ورقم الجوال والمنطقة والعنوان (مجمع/طريق/منزل) عشان تقدري تأكدي.";
+      confirmBtn.disabled = true;
+    } else if(!c.paymentConfirmed){
+      hint.textContent = "أكدي إنك حوّلتي المبلغ عبر بنفت عشان نقدر نأكد حجزك.";
       confirmBtn.disabled = true;
     } else {
       hint.textContent = "";
@@ -808,6 +983,23 @@
   function confirmBooking(worker){
     const hours = Array.from(state.selectedHours).sort((a,b)=>a-b);
     if(hours.length === 0) return;
+
+    const c = state.customer;
+    const name = c.name.trim();
+    const phone = c.phone.trim();
+    const phone2 = c.phone2.trim();
+    const area = c.area;
+    const block = c.block.trim();
+    const road = c.road.trim();
+    const house = c.house.trim();
+    if(!name || !phone || !area || !block || !road || !house){
+      showToast("عبّي الاسم ورقم الجوال والمنطقة والعنوان قبل التأكيد");
+      return;
+    }
+    if(!c.paymentConfirmed){
+      showToast("أكدي إنك حوّلتي المبلغ عبر بنفت قبل التأكيد");
+      return;
+    }
 
     // Final guard in case another booking filled up the day in another tab meanwhile
     const alreadyBooked = bookedHoursCount(worker.id, state.selectedDateIndex);
@@ -828,6 +1020,7 @@
     const total = hours.length * worker.price;
     const id = bookingCounter++;
     const bookedDate = DATES[state.selectedDateIndex];
+    const addressLine = `مجمع ${block}، طريق ${road}، منزل ${house}، ${area}`;
     state.bookings.unshift({
       id,
       ref: fmtRef(id),
@@ -843,10 +1036,25 @@
       hours,
       total,
       status: "confirmed",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      customerName: name,
+      customerPhone: phone,
+      customerPhone2: phone2,
+      customerArea: area,
+      customerBlock: block,
+      customerRoad: road,
+      customerHouse: house,
+      customerAddress: addressLine,
+      customerLat: c.lat,
+      customerLng: c.lng,
+      paymentConfirmed: true,
+      paymentMethod: "BenefitPay"
     });
     saveBookings();
     state.selectedHours = new Set();
+    state.customer.paymentConfirmed = false;
+    const paidCheckEl = document.getElementById('paidCheck');
+    if(paidCheckEl) paidCheckEl.checked = false;
     renderDateRow(worker);
     renderTimeSlots(worker);
     renderSummary(worker);
