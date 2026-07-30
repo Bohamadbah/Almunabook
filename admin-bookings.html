@@ -71,7 +71,7 @@
   .sync-note strong{ color:var(--teal); }
 
   /* ---------- Stats ---------- */
-  .stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:28px; }
   .stat-card{
     background:var(--white); border:1px solid var(--line); border-radius:var(--radius); padding:20px;
   }
@@ -133,6 +133,13 @@
   .status-pill{ display:inline-block; border-radius:999px; padding:5px 13px; font-size:.76rem; font-weight:700; }
   .status-pill.confirmed{ background:#E9F7EE; color:#1E8A4C; }
   .status-pill.cancelled{ background:var(--danger-light); color:var(--danger); }
+  .status-pill.conflict{ background:#FBEAE7; color:var(--danger); margin-inline-start:6px; }
+  tr.conflict-row{ background:#FDF4F2; }
+  tr.conflict-row:hover{ background:#FBEAE7; }
+  .conflict-banner{
+    background:var(--danger-light); color:var(--danger); border-radius:12px; padding:10px 14px;
+    font-size:.8rem; font-weight:700; margin-bottom:16px; text-align:center;
+  }
   .created-cell{ color:var(--muted); font-size:.78rem; white-space:nowrap; }
   .actions-cell{ display:flex; gap:8px; flex-wrap:wrap; }
 
@@ -260,6 +267,7 @@
       <option value="all">كل الحالات</option>
       <option value="confirmed">المؤكدة فقط</option>
       <option value="cancelled">الملغاة فقط</option>
+      <option value="conflict">فيها تعارض توقيت</option>
     </select>
     <select id="workerFilter">
       <option value="all">كل العاملات</option>
@@ -464,9 +472,40 @@
       " · " + d.toLocaleTimeString('ar', { hour:'2-digit', minute:'2-digit' });
   }
 
+  /* ---------------- Time-conflict detection ----------------
+     Two confirmed bookings for the SAME worker on the SAME date conflict
+     if they share any booked hour. Cancelled bookings never conflict. */
+  function getConflictingIds(){
+    const conflicting = new Set();
+    const confirmed = state.bookings.filter(b => b.status !== "cancelled");
+    for(let i=0;i<confirmed.length;i++){
+      for(let j=i+1;j<confirmed.length;j++){
+        const a = confirmed[i], b = confirmed[j];
+        if(a.workerId !== b.workerId || a.dateISO !== b.dateISO) continue;
+        const aHours = a.hours || [], bHours = b.hours || [];
+        const overlap = aHours.some(h => bHours.includes(h));
+        if(overlap){ conflicting.add(a.id); conflicting.add(b.id); }
+      }
+    }
+    return conflicting;
+  }
+  function conflictingWith(booking){
+    if(!booking || booking.status === "cancelled") return [];
+    return state.bookings.filter(b =>
+      b.id !== booking.id && b.status !== "cancelled" &&
+      b.workerId === booking.workerId && b.dateISO === booking.dateISO &&
+      (b.hours || []).some(h => (booking.hours || []).includes(h))
+    );
+  }
+
   function getFiltered(){
     let list = state.bookings.slice();
-    if(state.status !== "all") list = list.filter(b => b.status === state.status);
+    if(state.status === "conflict"){
+      const conflictIds = getConflictingIds();
+      list = list.filter(b => conflictIds.has(b.id));
+    } else if(state.status !== "all"){
+      list = list.filter(b => b.status === state.status);
+    }
     if(state.worker !== "all") list = list.filter(b => b.workerName === state.worker);
     if(state.search.trim()){
       const q = state.search.trim().toLowerCase();
@@ -489,11 +528,13 @@
     const confirmed = all.filter(b => b.status === "confirmed");
     const cancelled = all.filter(b => b.status === "cancelled");
     const revenue = confirmed.reduce((sum,b) => sum + Number(b.total || 0), 0);
+    const conflicts = getConflictingIds().size;
 
     const cards = [
       { label:"إجمالي الحجوزات", value: toArabicDigits(all.length), cls:"" },
       { label:"مؤكدة", value: toArabicDigits(confirmed.length), cls:"confirmed" },
       { label:"ملغاة", value: toArabicDigits(cancelled.length), cls:"cancelled" },
+      { label:"تعارضات توقيت", value: toArabicDigits(conflicts), cls: conflicts > 0 ? "cancelled" : "" },
       { label:"الإيراد المتوقع (المؤكدة)", value: fmtPrice(revenue), cls:"revenue" },
     ];
     document.getElementById('statsGrid').innerHTML = cards.map(c => `
@@ -517,6 +558,7 @@
     const tbody = document.getElementById('bookingsTbody');
     const list = getFiltered();
     const foot = document.getElementById('tableFoot');
+    const conflictIds = getConflictingIds();
 
     if(state.bookings.length === 0){
       tbody.innerHTML = `<tr class="empty-row"><td colspan="8">
@@ -535,8 +577,10 @@
       return;
     }
 
-    tbody.innerHTML = list.map(b => `
-      <tr>
+    tbody.innerHTML = list.map(b => {
+      const hasConflict = conflictIds.has(b.id);
+      return `
+      <tr class="${hasConflict ? 'conflict-row' : ''}">
         <td class="ref-cell">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
         <td>
           <div class="worker-cell">
@@ -550,7 +594,10 @@
         <td>${b.dateLabel || ""}</td>
         <td class="hours-cell">${(b.hours || []).map(fmtHour).join(' · ')}</td>
         <td class="total-cell">${fmtPrice(b.total)}</td>
-        <td><span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span></td>
+        <td>
+          <span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span>
+          ${hasConflict ? '<span class="status-pill conflict">⚠ تعارض توقيت</span>' : ''}
+        </td>
         <td class="created-cell">${fmtCreated(b.createdAt)}</td>
         <td>
           <div class="actions-cell">
@@ -560,7 +607,8 @@
           </div>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     foot.textContent = `عرض ${toArabicDigits(list.length)} من أصل ${toArabicDigits(state.bookings.length)} حجز`;
 
@@ -731,11 +779,13 @@
   /* ---------------- Preview modal ---------------- */
   function receiptHTML(b){
     const hoursLabel = (b.hours || []).map(fmtHour).join(' · ');
+    const conflicts = conflictingWith(b);
     return `
       <div class="receipt-ref">
         <div class="r">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</div>
         <div class="s"><span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span></div>
       </div>
+      ${conflicts.length ? `<div class="conflict-banner">⚠ تعارض توقيت مع ${conflicts.map(c => c.ref || ("SA-"+String(c.id).padStart(5,"0"))).join('، ')} — نفس العاملة ونفس الساعات بنفس اليوم.</div>` : ''}
       <div class="receipt-worker">
         <div class="avatar-sm" style="width:46px;height:46px;font-size:1rem;background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
         <div>
@@ -777,7 +827,21 @@
   document.getElementById('modalCancelToggleBtn').addEventListener('click', ()=>{
     const b = state.bookings.find(x => x.id === state.previewId);
     if(!b) return;
-    b.status = b.status === 'cancelled' ? 'confirmed' : 'cancelled';
+    if(b.status === 'cancelled'){
+      // Restoring: block if it would collide with an already-confirmed booking
+      const wouldConflict = state.bookings.some(other =>
+        other.id !== b.id && other.status !== 'cancelled' &&
+        other.workerId === b.workerId && other.dateISO === b.dateISO &&
+        (other.hours || []).some(h => (b.hours || []).includes(h))
+      );
+      if(wouldConflict){
+        alert("ما ينقدر يتم استعادة هذا الحجز — نفس العاملة محجوزة بنفس الساعات في نفس اليوم لحجز مؤكد آخر. ألغي أو عدّلي الحجز المتعارض أولًا.");
+        return;
+      }
+      b.status = 'confirmed';
+    } else {
+      b.status = 'cancelled';
+    }
     saveBookings();
     renderAll();
     openPreview(b.id);
