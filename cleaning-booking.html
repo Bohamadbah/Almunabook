@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ساعة | حجز عاملات نظافة بالساعة</title>
+<title>شركة المنى لتوريد العاملات | حجز عاملات نظافة بالساعة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -55,8 +55,9 @@
   }
   .brand{
     display:flex; align-items:center; gap:10px;
-    font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; color:var(--deep);
+    font-family:'Cairo',sans-serif; font-weight:900; font-size:1.15rem; color:var(--deep);
   }
+  .brand img{ height:42px; width:auto; display:block; }
   .brand .dot{
     width:12px;height:12px;border-radius:50%;background:var(--amber);
     box-shadow:0 0 0 4px var(--teal-light);
@@ -308,6 +309,9 @@
   @media (max-width: 560px){
     .workers-grid{ grid-template-columns:1fr; }
     .hero-stats{ flex-wrap:wrap; gap:18px; }
+    .brand{ font-size:.85rem; gap:6px; }
+    .brand img{ height:32px; }
+    .nav-cta{ padding:9px 14px; font-size:.8rem; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -321,7 +325,7 @@
 
 <header class="site">
   <div class="container nav">
-    <div class="brand"><span class="dot"></span> ساعة</div>
+    <div class="brand"><img src="logo.png" alt="شركة المنى لتوريد العاملات"> شركة المنى لتوريد العاملات</div>
     <ul class="nav-links">
       <li><a href="#workers">العاملات</a></li>
       <li><a href="#how">كيف تعمل</a></li>
@@ -340,7 +344,7 @@
     <div>
       <div class="eyebrow">نظام حجز بالساعة</div>
       <h1>نظّفي بيتك <span>بالساعة</span>، من غير التزام يومي كامل</h1>
-      <p class="lead">اختاري عاملة النظافة المناسبة، وحدّدي عدد الساعات اللي تحتاجينها من مؤشر الساعة، وأكدي حجزك خلال دقيقة.</p>
+      <p class="lead">اختاري عاملة النظافة المناسبة، وحدّدي فترة العمل اللي تناسبك، وأكدي حجزك خلال دقيقة.</p>
       <div class="hero-ctas">
         <button class="btn-primary" onclick="document.getElementById('workers').scrollIntoView()">شوفي العاملات المتاحات</button>
         <button class="btn-ghost" onclick="document.getElementById('how').scrollIntoView()">كيف يعمل النظام؟</button>
@@ -365,7 +369,7 @@
     </div>
     <div class="steps">
       <div class="step"><span class="num">01</span><h3>اختاري العاملة</h3><p>تصفحي الملفات، شوفي التقييمات والمناطق اللي تغطيها كل عاملة، واختاري الأنسب لبيتك.</p></div>
-      <div class="step"><span class="num">02</span><h3>حددي الساعات على المؤشر</h3><p>اضغطي على الساعات اللي تناسبك من مؤشر الساعة الدائري، وشوفي السعر الإجمالي يتحدث فورًا.</p></div>
+      <div class="step"><span class="num">02</span><h3>اختاري فترة العمل</h3><p>اختاري الفترة المناسبة لك (صباحية أو مسائية)، وشوفي السعر الإجمالي يتحدث فورًا.</p></div>
       <div class="step"><span class="num">03</span><h3>أكدي الحجز</h3><p>راجعي التفاصيل واضغطي تأكيد — بيوصلك الحجز في قائمة "حجوزاتي" فورًا.</p></div>
     </div>
   </section>
@@ -386,7 +390,7 @@
     <div class="section-head">
       <div class="eyebrow">الحجز بالساعة</div>
       <h2>حددي موعدك</h2>
-      <p>اضغطي على قطاعات الساعة اللي تناسبك — القطاعات الرمادية تعني إنها محجوزة مسبقًا.</p>
+      <p>اختاري فترة العمل المناسبة لك — الفترات باللون الرمادي تعني إنها محجوزة مسبقًا.</p>
     </div>
     <div class="booking-panel" id="bookingPanel">
       <div class="empty-state" id="bookingEmpty">
@@ -414,7 +418,7 @@
 </main>
 
 <footer>
-  <div class="container">ساعة — منصة حجز عاملات نظافة بالساعة · هذا نموذج تجريبي لأغراض العرض فقط</div>
+  <div class="container">شركة المنى لتوريد العاملات — منصة حجز عاملات نظافة بالساعة · هذا نموذج تجريبي لأغراض العرض فقط</div>
 </footer>
 
 <div class="toast" id="toast"><span class="tick">✓</span><span id="toastMsg"></span></div>

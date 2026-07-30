@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة الإدارة | ساعة</title>
+<title>لوحة الإدارة | شركة المنى لتوريد العاملات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -46,7 +46,8 @@
     border-bottom:1px solid var(--line);
   }
   .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 0; gap:16px; flex-wrap:wrap; }
-  .brand{ display:flex; align-items:center; gap:10px; font-family:'Cairo',sans-serif; font-weight:900; font-size:1.3rem; color:var(--deep); }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'Cairo',sans-serif; font-weight:900; font-size:1.05rem; color:var(--deep); }
+  .brand img{ height:38px; width:auto; display:block; }
   .brand .dot{ width:12px;height:12px;border-radius:50%;background:var(--amber); box-shadow:0 0 0 4px var(--teal-light); }
   .brand .tag{
     font-family:'Tajawal',sans-serif; font-weight:700; font-size:.72rem; color:var(--teal);
@@ -234,6 +235,8 @@
     .stats-grid{ grid-template-columns:1fr; }
     .table-card{ overflow-x:auto; }
     table{ min-width:760px; }
+    .brand{ font-size:.8rem; gap:6px; }
+    .brand img{ height:28px; }
   }
   :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
 </style>
@@ -242,7 +245,7 @@
 
 <header class="site">
   <div class="container nav">
-    <div class="brand"><span class="dot"></span> ساعة <span class="tag">لوحة الإدارة</span></div>
+    <div class="brand"><img src="logo.png" alt="شركة المنى لتوريد العاملات"> شركة المنى لتوريد العاملات <span class="tag">لوحة الإدارة</span></div>
     <a class="back-link" href="cleaning-booking.html">↩ رجوع لموقع الحجز</a>
   </div>
 </header>
@@ -332,7 +335,7 @@
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-head">
-      <div class="brand-mini"><span class="dot"></span> ساعة — إيصال حجز</div>
+      <div class="brand-mini"><span class="dot"></span> شركة المنى — إيصال حجز</div>
       <button class="modal-close" id="modalCloseBtn">✕</button>
     </div>
     <div class="receipt-body" id="receiptBody"></div>
@@ -856,7 +859,7 @@
     if(!b) return;
     document.getElementById('printReceipt').innerHTML = `
       <div class="print-receipt-card">
-        <div class="print-title">ساعة — إيصال حجز</div>
+        <div class="print-title">شركة المنى لتوريد العاملات — إيصال حجز</div>
         <div class="print-sub">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))} · طُبع في ${fmtCreated(new Date().toISOString())}</div>
         ${receiptHTML(b)}
       </div>
@@ -879,7 +882,7 @@
       </tr>
     `).join('');
     document.getElementById('printReport').innerHTML = `
-      <div class="print-title">ساعة — تقرير الحجوزات</div>
+      <div class="print-title">شركة المنى لتوريد العاملات — تقرير الحجوزات</div>
       <div class="print-sub">تاريخ الطباعة: ${fmtCreated(new Date().toISOString())} · عدد السجلات: ${list.length}</div>
       <table class="print-table">
         <thead>
