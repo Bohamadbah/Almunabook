@@ -228,20 +228,26 @@
   }
   .capacity-note{ color:#B9D6D2; font-size:.8rem; margin-bottom:16px; text-align:center; }
 
-  .time-slots{ display:flex; flex-direction:column; gap:14px; margin-bottom:18px; }
-  .time-period-card{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:14px; }
-  .time-period-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:.85rem; color:var(--white); margin-bottom:10px; }
-  .hour-chips{ display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; }
-  .hour-chip{
-    font-family:'Tajawal',sans-serif; font-weight:700; font-size:.82rem; color:var(--white);
-    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:11px;
-    padding:10px 8px; cursor:pointer; transition:all .2s; display:flex; flex-direction:column; align-items:center; gap:2px;
+  .time-slots{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .time-period-card{
+    width:100%; text-align:center; font-family:'Tajawal',sans-serif; cursor:pointer; transition:all .2s;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:18px 12px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
   }
-  .hour-chip:hover:not(:disabled){ border-color:var(--teal); background:rgba(47,158,143,.25); }
-  .hour-chip.selected{ background:var(--amber); border-color:var(--amber); color:var(--deep); }
-  .hour-chip.taken{ background:rgba(91,107,106,.35); border-color:transparent; color:#9FB0AF; cursor:not-allowed; }
-  .hour-chip.capped:disabled{ opacity:.4; cursor:not-allowed; }
-  .hour-chip .chip-note{ font-size:.62rem; font-weight:600; opacity:.85; }
+  .time-period-card:hover:not(:disabled){ border-color:var(--teal); background:rgba(47,158,143,.22); }
+  .time-period-card.selected{ background:var(--amber); border-color:var(--amber); }
+  .time-period-card.selected .time-period-title,
+  .time-period-card.selected .time-period-meta{ color:var(--deep); }
+  .time-period-card.selected .time-period-status{ color:var(--deep); font-weight:800; }
+  .time-period-card.taken{ background:rgba(91,107,106,.3); border-color:transparent; cursor:not-allowed; }
+  .time-period-card.capped:disabled{ opacity:.4; cursor:not-allowed; }
+  .time-period-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:.95rem; color:var(--white); }
+  .time-period-meta{ font-size:.76rem; color:#B9D6D2; }
+  .time-period-status{ font-size:.72rem; font-weight:700; color:#9FB0AF; margin-top:4px; }
+
+  @media (max-width: 480px){
+    .time-slots{ grid-template-columns:1fr; }
+  }
 
   .legend{ display:flex; gap:16px; justify-content:center; font-size:.78rem; color:#B9D6D2; margin-bottom:24px; flex-wrap:wrap; }
   .legend span{ display:inline-flex; align-items:center; gap:6px; }
@@ -451,7 +457,6 @@
   const TIME_PERIODS = [
     { id:"morning",   label:"٠٨:٠٠ ص - ١٢:٠٠ م", hours:[8,9,10,11] },
     { id:"afternoon", label:"٠٢:٠٠ م - ٠٦:٠٠ م", hours:[14,15,16,17] },
-    { id:"evening",   label:"٠٦:٠٠ م - ١٠:٠٠ م", hours:[18,19,20,21] },
   ];
   const HOURS = TIME_PERIODS.flatMap(p => p.hours);
   const MAX_DAILY_HOURS = 9;
@@ -700,6 +705,13 @@
     });
   }
 
+  function periodStatus(worker, period){
+    const dateIndex = state.selectedDateIndex;
+    const taken = period.hours.some(h => isHourTaken(worker.id, dateIndex, h));
+    const selected = period.hours.every(h => state.selectedHours.has(h));
+    return { taken, selected };
+  }
+
   function renderTimeSlots(worker){
     const wrap = document.getElementById('timeSlots');
     const noteBox = document.getElementById('fullDayNote');
@@ -710,42 +722,45 @@
     if(fullyBooked){
       noteBox.innerHTML = `<div class="full-day-banner">محجوزة بالكامل — وصلت ${worker.name} للحد الأقصى (${toArabicDigits(MAX_DAILY_HOURS)} ساعات عمل) لهذا اليوم. جربي تاريخ ثاني.</div>`;
     } else {
-      noteBox.innerHTML = `<div class="capacity-note">باقي ${toArabicDigits(remaining)} من ${toArabicDigits(MAX_DAILY_HOURS)} ساعات متاحة لهذا اليوم.</div>`;
+      noteBox.innerHTML = `<div class="capacity-note">اختاري فترة العمل المناسبة لك.</div>`;
     }
 
-    wrap.innerHTML = TIME_PERIODS.map(period => `
-      <div class="time-period-card">
-        <div class="time-period-title">${period.label}</div>
-        <div class="hour-chips">
-          ${period.hours.map(hour=>{
-            const taken = isHourTaken(worker.id, state.selectedDateIndex, hour);
-            const selected = state.selectedHours.has(hour);
-            const atCapacity = !selected && !taken && (booked + state.selectedHours.size) >= MAX_DAILY_HOURS;
-            const disabled = taken || fullyBooked || atCapacity;
-            let cls = "hour-chip";
-            if(taken) cls += " taken";
-            else if(selected) cls += " selected";
-            else if(atCapacity) cls += " capped";
-            return `<button type="button" class="${cls}" ${disabled && !selected ? 'disabled' : ''} data-hour="${hour}">
-              ${fmtHour(hour)}${taken ? '<span class="chip-note">محجوزة</span>' : ''}
-            </button>`;
-          }).join('')}
-        </div>
-      </div>
-    `).join('');
+    wrap.innerHTML = TIME_PERIODS.map(period => {
+      const { taken, selected } = periodStatus(worker, period);
+      const currentlySelectedCount = Array.from(state.selectedHours).length;
+      const wouldExceedCapacity = !selected && (booked + currentlySelectedCount + period.hours.length) > MAX_DAILY_HOURS;
+      const disabled = taken || fullyBooked || wouldExceedCapacity;
+      let cls = "time-period-card";
+      if(taken) cls += " taken";
+      else if(selected) cls += " selected";
+      else if(disabled) cls += " capped";
 
-    wrap.querySelectorAll('.hour-chip').forEach(chip=>{
-      chip.addEventListener('click', ()=>{
-        if(chip.disabled) return;
-        const hour = Number(chip.dataset.hour);
-        if(state.selectedHours.has(hour)){
-          state.selectedHours.delete(hour);
+      const subtotal = period.hours.length * worker.price;
+      let statusLabel = "متاحة";
+      if(taken) statusLabel = "محجوزة";
+      else if(selected) statusLabel = "مختارة";
+      else if(disabled) statusLabel = "غير متاحة";
+
+      return `<button type="button" class="${cls}" ${disabled && !selected ? 'disabled' : ''} data-period="${period.id}">
+        <div class="time-period-title">${period.label}</div>
+        <div class="time-period-meta">${toArabicDigits(period.hours.length)} ساعات عمل · ${fmtPrice(subtotal)}</div>
+        <div class="time-period-status">${statusLabel}</div>
+      </button>`;
+    }).join('');
+
+    wrap.querySelectorAll('.time-period-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        if(card.disabled) return;
+        const period = TIME_PERIODS.find(p => p.id === card.dataset.period);
+        const { selected } = periodStatus(worker, period);
+        if(selected){
+          period.hours.forEach(h => state.selectedHours.delete(h));
         } else {
-          if(booked + state.selectedHours.size >= MAX_DAILY_HOURS){
+          if(booked + state.selectedHours.size + period.hours.length > MAX_DAILY_HOURS){
             showToast(`الحد الأقصى ${toArabicDigits(MAX_DAILY_HOURS)} ساعات عمل يوميًا لكل عاملة`);
             return;
           }
-          state.selectedHours.add(hour);
+          period.hours.forEach(h => state.selectedHours.add(h));
         }
         renderTimeSlots(worker);
         renderSummary(worker);
