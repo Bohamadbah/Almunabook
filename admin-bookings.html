@@ -6,6 +6,7 @@
 <title>لوحة الإدارة | شركة المنى لتوريد العاملات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg: #F6FAF9;
@@ -185,6 +186,9 @@
   }
   .receipt-total .l{ font-family:'Cairo',sans-serif; font-weight:800; font-size:1rem; }
   .receipt-total .v{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; color:var(--teal); }
+  .payment-receipt-block{ margin-bottom:16px; }
+  .prb-label{ font-size:.8rem; font-weight:700; color:var(--muted); margin-bottom:8px; }
+  .prb-img{ width:100%; max-height:260px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:var(--bg); cursor:zoom-in; }
   .modal-actions{ display:flex; gap:10px; padding:0 24px 24px; }
   .modal-actions .btn{ flex:1; }
 
@@ -213,7 +217,7 @@
   .print-title{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; margin-bottom:4px; }
   .print-sub{ color:#555; font-size:.85rem; margin-bottom:18px; }
   .print-table{ width:100%; border-collapse:collapse; font-size:.82rem; }
-  .print-table th, .print-table td{ border:1px solid #ccc; padding:8px 10px; text-align:right; }
+  .print-table th, .print-table td{ border:1px solid #ccc; padding:8px 10px; text-align:right; word-break:break-word; }
   .print-table th{ background:#eee; }
   .print-receipt-card{ max-width:420px; margin:0 auto; border:1px solid #999; border-radius:10px; padding:22px; }
 
@@ -237,6 +241,9 @@
     table{ min-width:920px; }
     .brand{ font-size:.8rem; gap:6px; }
     .brand img{ height:28px; }
+    .container{ padding:0 14px; }
+    .toolbar{ padding:14px; }
+    .toolbar .btn{ flex:1 1 auto; }
   }
   :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
 </style>
@@ -281,7 +288,9 @@
     </select>
     <div class="spacer"></div>
     <button class="btn btn-ghost" id="refreshBtn">↻ تحديث</button>
-    <button class="btn btn-amber" id="printListBtn">🖨 طباعة القائمة</button>
+    <button class="btn btn-amber" id="printListBtn">🖨 طباعة جدول المواعيد</button>
+    <button class="btn btn-ghost" id="exportExcelBtn">📊 تصدير Excel</button>
+    <button class="btn btn-ghost" id="exportPdfBtn">📄 تصدير PDF</button>
     <button class="btn btn-danger-outline" id="clearAllBtn">🗑 مسح كل الحجوزات</button>
   </div>
 
@@ -607,6 +616,7 @@
         <td>
           <span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span>
           ${hasConflict ? '<span class="status-pill conflict">⚠ تعارض توقيت</span>' : ''}
+          ${b.customerReceiptImage ? '<span class="status-pill confirmed" title="فيه إيصال تحويل مرفق">📎 إيصال</span>' : ''}
         </td>
         <td class="created-cell">${fmtCreated(b.createdAt)}</td>
         <td>
@@ -800,10 +810,18 @@
         <div class="receipt-row"><span>العميلة</span><span>${b.customerName || '—'}</span></div>
         <div class="receipt-row"><span>رقم الجوال</span><span>${b.customerPhone || '—'}</span></div>
         ${b.customerPhone2 ? `<div class="receipt-row"><span>جوال إضافي</span><span>${b.customerPhone2}</span></div>` : ''}
+        ${b.customerEmail ? `<div class="receipt-row"><span>الإيميل</span><span>${b.customerEmail}</span></div>` : ''}
         <div class="receipt-row"><span>العنوان</span><span style="white-space:pre-wrap;">${b.customerAddress || '—'}</span></div>
         ${(b.customerLat && b.customerLng) ? `<div class="receipt-row"><span>الموقع</span><span><a href="https://www.google.com/maps?q=${b.customerLat},${b.customerLng}" target="_blank" rel="noopener">فتح على الخريطة</a></span></div>` : ''}
         <div class="receipt-row"><span>الدفع</span><span>${b.paymentConfirmed ? `✓ مدفوع (${b.paymentMethod || 'بنفت'})` : 'غير مؤكد'}</span></div>
       </div>
+      ${b.customerReceiptImage ? `
+      <div class="payment-receipt-block">
+        <div class="prb-label">📎 صورة إيصال التحويل</div>
+        <a href="${b.customerReceiptImage}" target="_blank" rel="noopener">
+          <img src="${b.customerReceiptImage}" alt="إيصال التحويل" class="prb-img">
+        </a>
+      </div>` : ''}
       <div class="receipt-worker">
         <div class="avatar-sm" style="width:46px;height:46px;font-size:1rem;background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
         <div>
@@ -883,27 +901,37 @@
     window.print();
   }
 
+  function getScheduleOrderedList(){
+    return getFiltered().slice().sort((a,b)=>{
+      const dateCompare = (a.dateISO || "").localeCompare(b.dateISO || "");
+      if(dateCompare !== 0) return dateCompare;
+      const aFirst = Math.min(...(a.hours && a.hours.length ? a.hours : [99]));
+      const bFirst = Math.min(...(b.hours && b.hours.length ? b.hours : [99]));
+      return aFirst - bFirst;
+    });
+  }
+
   function printList(){
-    const list = getFiltered();
+    const list = getScheduleOrderedList();
     const rows = list.map(b => `
       <tr>
-        <td>${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
-        <td>${b.customerName || '—'}${b.customerPhone ? " · " + b.customerPhone : ""}</td>
-        <td>${b.workerName}${b.workerArea ? " · " + b.workerArea : ""}</td>
         <td>${b.dateLabel || ""}</td>
         <td>${(b.hours || []).map(fmtHour).join(' · ')}</td>
+        <td>${b.workerName}</td>
+        <td>${b.customerName || '—'}<br>${b.customerPhone || ''}${b.customerPhone2 ? ' / ' + b.customerPhone2 : ''}</td>
+        <td>${b.customerAddress || '—'}</td>
         <td>${fmtPrice(b.total)}</td>
         <td>${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</td>
-        <td>${fmtCreated(b.createdAt)}</td>
+        <td>${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
       </tr>
     `).join('');
     document.getElementById('printReport').innerHTML = `
-      <div class="print-title">شركة المنى لتوريد العاملات — تقرير الحجوزات</div>
-      <div class="print-sub">تاريخ الطباعة: ${fmtCreated(new Date().toISOString())} · عدد السجلات: ${list.length}</div>
+      <div class="print-title">شركة المنى لتوريد العاملات — جدول المواعيد</div>
+      <div class="print-sub">تاريخ الطباعة: ${fmtCreated(new Date().toISOString())} · عدد المواعيد: ${list.length}</div>
       <table class="print-table">
         <thead>
           <tr>
-            <th>رقم الحجز</th><th>العميلة</th><th>العاملة</th><th>التاريخ</th><th>الساعات</th><th>الإجمالي</th><th>الحالة</th><th>أُنشئ في</th>
+            <th>التاريخ</th><th>الوقت</th><th>العاملة</th><th>العميلة والجوال</th><th>العنوان</th><th>الإجمالي</th><th>الحالة</th><th>رقم الحجز</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -913,6 +941,47 @@
     window.print();
   }
   document.getElementById('printListBtn').addEventListener('click', printList);
+
+  function exportExcel(){
+    if(typeof XLSX === 'undefined'){
+      alert("تعذر تحميل مكتبة التصدير — تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      return;
+    }
+    const list = getScheduleOrderedList();
+    if(list.length === 0){ alert("ما فيه حجوزات لتصديرها"); return; }
+    const rows = list.map(b => ({
+      "رقم الحجز": b.ref || ("SA-" + String(b.id).padStart(5,"0")),
+      "التاريخ": b.dateLabel || "",
+      "الوقت": (b.hours || []).map(fmtHour).join(' ، '),
+      "العاملة": b.workerName || "",
+      "منطقة العاملة": b.workerArea || "",
+      "العميلة": b.customerName || "",
+      "الإيميل": b.customerEmail || "",
+      "الجوال الأول": b.customerPhone || "",
+      "الجوال الثاني": b.customerPhone2 || "",
+      "العنوان": b.customerAddress || "",
+      "الإجمالي (د.ب)": b.total || 0,
+      "الحالة": b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة',
+      "الدفع": b.paymentConfirmed ? `مدفوع (${b.paymentMethod || 'بنفت'})` : 'غير مؤكد',
+      "أُنشئ في": fmtCreated(b.createdAt)
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Object.keys(rows[0]).map(()=> ({ wch: 18 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الحجوزات");
+    const dateStamp = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `حجوزات-المنى-${dateStamp}.xlsx`);
+  }
+  document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+
+  function exportPdf(){
+    const list = getScheduleOrderedList();
+    if(list.length === 0){ alert("ما فيه حجوزات لتصديرها"); return; }
+    alert("بيفتح الآن مربع الطباعة — اختاري \"Save as PDF\" / \"حفظ كـ PDF\" من قائمة الوجهة (Destination) بدل الطابعة، ثم احفظي الملف.");
+    printList();
+  }
+  document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+
 
   document.getElementById('clearAllBtn').addEventListener('click', ()=>{
     if(state.bookings.length === 0) return;

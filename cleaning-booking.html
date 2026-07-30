@@ -6,6 +6,7 @@
 <title>شركة المنى لتوريد العاملات | حجز عاملات نظافة بالساعة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/emailjs-com/3.2.0/email.min.js"></script>
 <style>
   :root{
     --bg: #F6FAF9;
@@ -302,6 +303,20 @@
   }
   .pay-check{ display:flex; align-items:flex-start; gap:8px; font-size:.83rem; color:#DDEEEC; cursor:pointer; }
   .pay-check input{ width:auto; margin-top:2px; accent-color:var(--amber); }
+
+  .receipt-upload{ margin-top:14px; display:none; }
+  .receipt-upload.show{ display:block; }
+  .receipt-upload-label{ font-size:.8rem; font-weight:700; color:#DDEEEC; margin-bottom:8px; display:block; }
+  .receipt-drop{
+    border:1.5px dashed rgba(255,255,255,.35); border-radius:12px; padding:16px; text-align:center;
+    cursor:pointer; transition:all .2s; background:rgba(255,255,255,.05);
+  }
+  .receipt-drop:hover{ border-color:var(--amber); background:rgba(242,162,12,.08); }
+  .receipt-drop .rd-text{ font-size:.8rem; color:#B9D6D2; }
+  .receipt-preview{ margin-top:10px; display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.06); border-radius:12px; padding:10px; }
+  .receipt-preview img{ width:56px; height:56px; object-fit:cover; border-radius:8px; }
+  .receipt-preview .rp-name{ font-size:.78rem; color:var(--white); flex:1; word-break:break-all; }
+  .receipt-preview .rp-remove{ background:none; border:none; color:#F5C3B9; font-size:.78rem; cursor:pointer; font-weight:700; }
   .summary-row{ display:flex; justify-content:space-between; font-size:.9rem; padding:6px 0; color:#DDEEEC; }
   .summary-row.total{ border-top:1px solid rgba(255,255,255,.2); margin-top:8px; padding-top:12px; font-family:'Cairo',sans-serif; font-weight:800; font-size:1.15rem; color:var(--white); }
   .hint{ font-size:.8rem; color:#F7C77C; min-height:18px; margin-bottom:10px;}
@@ -357,6 +372,9 @@
     .brand{ font-size:.85rem; gap:6px; }
     .brand img{ height:32px; }
     .nav-cta{ padding:9px 14px; font-size:.8rem; }
+    .booking-panel{ padding:22px 16px; border-radius:20px; }
+    .container{ padding:0 16px; }
+    .worker-card{ padding:18px; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -515,6 +533,45 @@
 
   const BENEFIT_PAY_IBAN = "BH59ALSA00188102100100";
 
+  /* ---------------- Email invoice setup (EmailJS) ----------------
+     To enable automatic invoice emails, create a free account at
+     https://www.emailjs.com (free tier: 200 emails/month), connect your
+     Gmail/Outlook as an "Email Service", and create an "Email Template"
+     with these variable placeholders: {{to_email}} {{to_name}} {{ref}}
+     {{worker_name}} {{date_label}} {{hours_label}} {{total}} {{address}}
+     {{company_name}}. Then replace the 3 placeholders below with your
+     Public Key, Service ID, and Template ID from the EmailJS dashboard.
+     Until replaced, invoice emails are silently skipped (booking still works). */
+  const EMAILJS_PUBLIC_KEY = "YOUR_EMAILJS_PUBLIC_KEY";
+  const EMAILJS_SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID";
+  const EMAILJS_TEMPLATE_ID = "YOUR_EMAILJS_TEMPLATE_ID";
+  const EMAIL_FEATURE_CONFIGURED =
+    EMAILJS_PUBLIC_KEY.indexOf("YOUR_") !== 0 &&
+    EMAILJS_SERVICE_ID.indexOf("YOUR_") !== 0 &&
+    EMAILJS_TEMPLATE_ID.indexOf("YOUR_") !== 0;
+  if(EMAIL_FEATURE_CONFIGURED && typeof emailjs !== 'undefined'){
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }
+
+  function sendInvoiceEmail(booking){
+    if(!EMAIL_FEATURE_CONFIGURED || typeof emailjs === 'undefined' || !booking.customerEmail) return;
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: booking.customerEmail,
+      to_name: booking.customerName,
+      ref: booking.ref,
+      worker_name: booking.workerName,
+      date_label: booking.dateLabel,
+      hours_label: (booking.hours || []).map(fmtHour).join(' ، '),
+      total: fmtPrice(booking.total),
+      address: booking.customerAddress,
+      company_name: "شركة المنى لتوريد العاملات"
+    }).then(()=>{
+      showToast("تم إرسال الفاتورة لإيميلك بنجاح");
+    }).catch(()=>{
+      showToast("تم تأكيد الحجز، بس ما قدرنا نرسل الفاتورة بالإيميل");
+    });
+  }
+
   const WEEKDAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
 
   function nextDays(n){
@@ -553,7 +610,7 @@
     selectedWorkerId: null,
     selectedDateIndex: 0,
     selectedHours: new Set(),
-    customer: { name:"", phone:"", phone2:"", area:"", block:"", road:"", house:"", lat:null, lng:null, paymentConfirmed:false },
+    customer: { name:"", phone:"", phone2:"", email:"", area:"", block:"", road:"", house:"", lat:null, lng:null, paymentConfirmed:false, receiptDataUrl:null, receiptFileName:"" },
     bookings: [] // {id, ref, workerId, workerName, workerArea, dateIndex, dateISO, hours:[...], total, status, createdAt, customerName, customerPhone, customerAddress}
   };
   let bookingCounter = 1;
@@ -576,7 +633,8 @@
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bookings));
       localStorage.setItem(COUNTER_KEY, String(bookingCounter));
-    }catch(e){ /* storage unavailable — booking still works for this session */ }
+      return true;
+    }catch(e){ return false; }
   }
   function fmtRef(id){
     return "SA-" + String(id).padStart(5,"0");
@@ -747,6 +805,10 @@
             </div>
           </div>
           <div class="field-group">
+            <label class="field-label" for="custEmail">البريد الإلكتروني (لإرسال الفاتورة)</label>
+            <input type="email" id="custEmail" placeholder="مثال: name@email.com" value="${escapeHtml(state.customer.email)}">
+          </div>
+          <div class="field-group">
             <label class="field-label" for="custArea">منطقة السكن</label>
             <select id="custArea">
               <option value="" ${!state.customer.area ? 'selected' : ''} disabled>اختاري المنطقة</option>
@@ -785,6 +847,15 @@
             <input type="checkbox" id="paidCheck" ${state.customer.paymentConfirmed ? 'checked' : ''}>
             <span>حوّلت المبلغ عبر بنفت لهذا الحساب</span>
           </label>
+
+          <div class="receipt-upload ${state.customer.paymentConfirmed ? 'show' : ''}" id="receiptUpload">
+            <span class="receipt-upload-label">إثبات التحويل (صورة سكرين شوت من بنفت)</span>
+            <input type="file" id="receiptFileInput" accept="image/*" style="display:none;">
+            <div class="receipt-drop" id="receiptDrop">
+              <div class="rd-text">📎 اضغطي هنا لرفع صورة إيصال التحويل</div>
+            </div>
+            <div id="receiptPreviewWrap"></div>
+          </div>
         </div>
 
         <div class="hint" id="bookingHint"></div>
@@ -796,9 +867,9 @@
     renderTimeSlots(worker);
     renderSummary(worker);
 
-    ['custName','custPhone','custPhone2','custBlock','custRoad','custHouse'].forEach(id=>{
+    ['custName','custPhone','custPhone2','custEmail','custBlock','custRoad','custHouse'].forEach(id=>{
       document.getElementById(id).addEventListener('input', (e)=>{
-        const keyMap = { custName:'name', custPhone:'phone', custPhone2:'phone2', custBlock:'block', custRoad:'road', custHouse:'house' };
+        const keyMap = { custName:'name', custPhone:'phone', custPhone2:'phone2', custEmail:'email', custBlock:'block', custRoad:'road', custHouse:'house' };
         state.customer[keyMap[id]] = e.target.value;
         renderSummary(worker);
       });
@@ -845,10 +916,84 @@
 
     document.getElementById('paidCheck').addEventListener('change', (e)=>{
       state.customer.paymentConfirmed = e.target.checked;
+      document.getElementById('receiptUpload').classList.toggle('show', e.target.checked);
       renderSummary(worker);
     });
 
+    document.getElementById('receiptDrop').addEventListener('click', ()=>{
+      document.getElementById('receiptFileInput').click();
+    });
+
+    document.getElementById('receiptFileInput').addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      if(!file.type.startsWith('image/')){
+        showToast("لازم ترفعي صورة (سكرين شوت) لإيصال التحويل");
+        return;
+      }
+      compressImage(file, 900, 0.75).then(dataUrl=>{
+        state.customer.receiptDataUrl = dataUrl;
+        state.customer.receiptFileName = file.name;
+        renderReceiptPreview();
+        renderSummary(worker);
+      }).catch(()=>{
+        showToast("ما قدرنا نقرأ الصورة، جربي صورة ثانية");
+      });
+    });
+
+    renderReceiptPreview();
+
     document.getElementById('confirmBtn').addEventListener('click', ()=> confirmBooking(worker));
+  }
+
+  function renderReceiptPreview(){
+    const wrap = document.getElementById('receiptPreviewWrap');
+    if(!wrap) return;
+    if(!state.customer.receiptDataUrl){
+      wrap.innerHTML = "";
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="receipt-preview">
+        <img src="${state.customer.receiptDataUrl}" alt="إيصال التحويل">
+        <span class="rp-name">${escapeHtml(state.customer.receiptFileName || "إيصال التحويل")}</span>
+        <button type="button" class="rp-remove" id="removeReceiptBtn">إزالة</button>
+      </div>
+    `;
+    document.getElementById('removeReceiptBtn').addEventListener('click', ()=>{
+      state.customer.receiptDataUrl = null;
+      state.customer.receiptFileName = "";
+      document.getElementById('receiptFileInput').value = "";
+      renderReceiptPreview();
+      const worker = WORKERS.find(w => w.id === state.selectedWorkerId);
+      if(worker) renderSummary(worker);
+    });
+  }
+
+  function compressImage(file, maxWidth, quality){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let { width, height } = img;
+          if(width > maxWidth){
+            height = Math.round(height * (maxWidth / width));
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   function renderDateRow(worker){
@@ -963,16 +1108,20 @@
     const hint = document.getElementById('bookingHint');
     const confirmBtn = document.getElementById('confirmBtn');
     const c = state.customer;
-    const hasContactInfo = c.name.trim() && c.phone.trim() && c.area && c.block.trim() && c.road.trim() && c.house.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim());
+    const hasContactInfo = c.name.trim() && c.phone.trim() && emailValid && c.area && c.block.trim() && c.road.trim() && c.house.trim();
 
     if(hours.length === 0){
       hint.textContent = "حددي فترة عمل وحدة على الأقل عشان تقدري تأكدي.";
       confirmBtn.disabled = true;
     } else if(!hasContactInfo){
-      hint.textContent = "عبّي الاسم ورقم الجوال والمنطقة والعنوان (مجمع/طريق/منزل) عشان تقدري تأكدي.";
+      hint.textContent = "عبّي الاسم ورقم الجوال وإيميل صحيح والمنطقة والعنوان (مجمع/طريق/منزل) عشان تقدري تأكدي.";
       confirmBtn.disabled = true;
     } else if(!c.paymentConfirmed){
       hint.textContent = "أكدي إنك حوّلتي المبلغ عبر بنفت عشان نقدر نأكد حجزك.";
+      confirmBtn.disabled = true;
+    } else if(!c.receiptDataUrl){
+      hint.textContent = "ارفعي صورة إيصال التحويل عشان نقدر نأكد حجزك.";
       confirmBtn.disabled = true;
     } else {
       hint.textContent = "";
@@ -988,16 +1137,22 @@
     const name = c.name.trim();
     const phone = c.phone.trim();
     const phone2 = c.phone2.trim();
+    const email = c.email.trim();
     const area = c.area;
     const block = c.block.trim();
     const road = c.road.trim();
     const house = c.house.trim();
-    if(!name || !phone || !area || !block || !road || !house){
-      showToast("عبّي الاسم ورقم الجوال والمنطقة والعنوان قبل التأكيد");
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if(!name || !phone || !emailValid || !area || !block || !road || !house){
+      showToast("عبّي الاسم ورقم الجوال وإيميل صحيح والمنطقة والعنوان قبل التأكيد");
       return;
     }
     if(!c.paymentConfirmed){
       showToast("أكدي إنك حوّلتي المبلغ عبر بنفت قبل التأكيد");
+      return;
+    }
+    if(!c.receiptDataUrl){
+      showToast("ارفعي صورة إيصال التحويل قبل التأكيد");
       return;
     }
 
@@ -1021,7 +1176,7 @@
     const id = bookingCounter++;
     const bookedDate = DATES[state.selectedDateIndex];
     const addressLine = `مجمع ${block}، طريق ${road}، منزل ${house}، ${area}`;
-    state.bookings.unshift({
+    const newBooking = {
       id,
       ref: fmtRef(id),
       workerId: worker.id,
@@ -1040,6 +1195,7 @@
       customerName: name,
       customerPhone: phone,
       customerPhone2: phone2,
+      customerEmail: email,
       customerArea: area,
       customerBlock: block,
       customerRoad: road,
@@ -1048,18 +1204,33 @@
       customerLat: c.lat,
       customerLng: c.lng,
       paymentConfirmed: true,
-      paymentMethod: "BenefitPay"
-    });
-    saveBookings();
+      paymentMethod: "BenefitPay",
+      customerReceiptImage: c.receiptDataUrl,
+      customerReceiptFileName: c.receiptFileName
+    };
+    state.bookings.unshift(newBooking);
+    if(!saveBookings()){
+      state.bookings.shift();
+      showToast("الصورة كبيرة والتخزين ممتلئ — جربي صورة أصغر أو امسحي حجوزات قديمة من لوحة الإدارة");
+      return;
+    }
     state.selectedHours = new Set();
     state.customer.paymentConfirmed = false;
+    state.customer.receiptDataUrl = null;
+    state.customer.receiptFileName = "";
     const paidCheckEl = document.getElementById('paidCheck');
     if(paidCheckEl) paidCheckEl.checked = false;
+    const receiptUploadEl = document.getElementById('receiptUpload');
+    if(receiptUploadEl) receiptUploadEl.classList.remove('show');
+    const receiptFileInputEl = document.getElementById('receiptFileInput');
+    if(receiptFileInputEl) receiptFileInputEl.value = "";
+    renderReceiptPreview();
     renderDateRow(worker);
     renderTimeSlots(worker);
     renderSummary(worker);
     renderBookingsList();
     showToast(`تم تأكيد حجز ${worker.name} بنجاح`);
+    sendInvoiceEmail(newBooking);
     document.getElementById('bookings').scrollIntoView({behavior:'smooth'});
   }
 
