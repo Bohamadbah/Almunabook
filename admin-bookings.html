@@ -7,6 +7,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  /* Same Firebase project as cleaning-booking.html — paste the identical 6 values here. */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAY1M6Db9WlBK683K6Yf8gAARWvPDGCz14",
+    authDomain: "almunabooking.firebaseapp.com",
+    projectId: "almunabooking",
+    storageBucket: "almunabooking.firebasestorage.app",
+    messagingSenderId: "770090424936",
+    appId: "1:770090424936:web:5d56334cf3c1949793b9dd"
+  };
+  const FIREBASE_CONFIGURED = firebaseConfig.apiKey.indexOf("YOUR_") !== 0;
+  window.FIREBASE_CONFIGURED = FIREBASE_CONFIGURED;
+
+  if(FIREBASE_CONFIGURED){
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js").then(({ initializeApp }) => {
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js").then((fs) => {
+        const app = initializeApp(firebaseConfig);
+        const db = fs.getFirestore(app);
+        window.db = db;
+        window.fb = fs;
+        window.dispatchEvent(new Event('firebase-ready'));
+      });
+    });
+  } else {
+    window.dispatchEvent(new Event('firebase-not-configured'));
+  }
+</script>
 <style>
   :root{
     --bg: #F6FAF9;
@@ -244,6 +271,10 @@
     .container{ padding:0 14px; }
     .toolbar{ padding:14px; }
     .toolbar .btn{ flex:1 1 auto; }
+    .field label{ font-size:.76rem; }
+    .field input{ font-size:.82rem; padding:9px 11px; }
+    .modal-head{ padding:16px 18px; }
+    .receipt-body{ padding:16px; }
   }
   :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
 </style>
@@ -410,6 +441,9 @@
   const WORKERS_STORAGE_KEY = "saa_workers_v1";
   const COLOR_PALETTE = ["#2F9E8F","#F2A20C","#0E3B39","#C9503D","#3E7CB1","#8A5FBF"];
 
+  // Compare ids reliably whether they're numbers (local mode) or Firestore doc-id strings (cloud mode)
+  function idEq(a, b){ return String(a) === String(b); }
+
   const DEFAULT_WORKERS = [
     { id:1, name:"فاطمة العلي", area:"المنامة", rating:4.9, reviews:132, price:3.5, tags:["تنظيف عميق","نوافذ"], color:"#2F9E8F", initials:"ف ع" },
     { id:2, name:"مريم حسن", area:"الرفاع", rating:4.8, reviews:98, price:3.0, tags:["غسيل ملابس","كي"], color:"#F2A20C", initials:"م ح" },
@@ -431,7 +465,7 @@
     selectedColor: COLOR_PALETTE[0]
   };
 
-  function loadWorkers(){
+  function loadWorkersLocal(){
     try{
       const raw = localStorage.getItem(WORKERS_STORAGE_KEY);
       if(raw){
@@ -445,7 +479,7 @@
       state.workers = DEFAULT_WORKERS;
     }
   }
-  function saveWorkers(){
+  function saveWorkersLocal(){
     try{ localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers)); }catch(e){}
   }
   function initialsFromName(name){
@@ -455,7 +489,7 @@
     return parts[0][0] + " " + parts[1][0];
   }
 
-  function loadBookings(){
+  function loadBookingsLocal(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       state.bookings = raw ? JSON.parse(raw) : [];
@@ -463,8 +497,28 @@
       state.bookings = [];
     }
   }
-  function saveBookings(){
+  function saveBookingsLocal(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bookings)); }catch(e){}
+  }
+
+  function subscribeWorkersCloud(){
+    const { collection, onSnapshot } = window.fb;
+    onSnapshot(collection(window.db, "workers"), (snap)=>{
+      const fromCloud = [];
+      snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
+      state.workers = fromCloud.length ? fromCloud : DEFAULT_WORKERS;
+      renderAll();
+    }, (err)=>{ console.error('Firestore sync error:', err); });
+  }
+  function subscribeBookingsCloud(){
+    const { collection, onSnapshot } = window.fb;
+    onSnapshot(collection(window.db, "bookings"), (snap)=>{
+      const fromCloud = [];
+      snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
+      fromCloud.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      state.bookings = fromCloud;
+      renderAll();
+    }, (err)=>{ console.error('Firestore sync error:', err); });
   }
 
   function toArabicDigits(n){
@@ -477,6 +531,10 @@
     return h12 + ":00 " + period;
   }
   function fmtPrice(p){ return Number(p).toFixed(3) + " د.ب"; }
+  function fmtRef(id){
+    if(typeof id === "number") return "SA-" + String(id).padStart(5,"0");
+    return "SA-" + String(id).slice(-6).toUpperCase();
+  }
   function fmtCreated(iso){
     if(!iso) return "—";
     const d = new Date(iso);
@@ -494,7 +552,7 @@
     for(let i=0;i<confirmed.length;i++){
       for(let j=i+1;j<confirmed.length;j++){
         const a = confirmed[i], b = confirmed[j];
-        if(a.workerId !== b.workerId || a.dateISO !== b.dateISO) continue;
+        if(!idEq(a.workerId, b.workerId) || a.dateISO !== b.dateISO) continue;
         const aHours = a.hours || [], bHours = b.hours || [];
         const overlap = aHours.some(h => bHours.includes(h));
         if(overlap){ conflicting.add(a.id); conflicting.add(b.id); }
@@ -505,8 +563,8 @@
   function conflictingWith(booking){
     if(!booking || booking.status === "cancelled") return [];
     return state.bookings.filter(b =>
-      b.id !== booking.id && b.status !== "cancelled" &&
-      b.workerId === booking.workerId && b.dateISO === booking.dateISO &&
+      !idEq(b.id, booking.id) && b.status !== "cancelled" &&
+      idEq(b.workerId, booking.workerId) && b.dateISO === booking.dateISO &&
       (b.hours || []).some(h => (booking.hours || []).includes(h))
     );
   }
@@ -523,7 +581,7 @@
     if(state.search.trim()){
       const q = state.search.trim().toLowerCase();
       list = list.filter(b =>
-        (b.ref || "").toLowerCase().includes(q) ||
+        fmtRef(b.id).toLowerCase().includes(q) ||
         (b.workerName || "").toLowerCase().includes(q) ||
         (b.customerName || "").toLowerCase().includes(q) ||
         (b.customerPhone || "").toLowerCase().includes(q) ||
@@ -596,7 +654,7 @@
       const hasConflict = conflictIds.has(b.id);
       return `
       <tr class="${hasConflict ? 'conflict-row' : ''}">
-        <td class="ref-cell">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
+        <td class="ref-cell">${fmtRef(b.id)}</td>
         <td>
           <div class="worker-name-sm">${b.customerName || '—'}</div>
           <div class="worker-area-sm">${b.customerPhone || ''}</div>
@@ -633,23 +691,30 @@
     foot.textContent = `عرض ${toArabicDigits(list.length)} من أصل ${toArabicDigits(state.bookings.length)} حجز`;
 
     tbody.querySelectorAll('[data-preview]').forEach(btn=>{
-      btn.addEventListener('click', ()=> openPreview(Number(btn.dataset.preview)));
+      btn.addEventListener('click', ()=> openPreview(btn.dataset.preview));
     });
     tbody.querySelectorAll('[data-print]').forEach(btn=>{
-      btn.addEventListener('click', ()=> printReceipt(Number(btn.dataset.print)));
+      btn.addEventListener('click', ()=> printReceipt(btn.dataset.print));
     });
     tbody.querySelectorAll('[data-delete]').forEach(btn=>{
-      btn.addEventListener('click', ()=> deleteBooking(Number(btn.dataset.delete)));
+      btn.addEventListener('click', ()=> deleteBooking(btn.dataset.delete));
     });
   }
 
   function deleteBooking(id){
-    const b = state.bookings.find(x => x.id === id);
+    const b = state.bookings.find(x => idEq(x.id, id));
     if(!b) return;
-    if(!confirm(`تأكيد حذف الحجز ${b.ref || id} نهائيًا؟ ما يمكن التراجع عن هذا الإجراء.`)) return;
-    state.bookings = state.bookings.filter(x => x.id !== id);
-    saveBookings();
-    renderAll();
+    if(!confirm(`تأكيد حذف الحجز ${fmtRef(b.id)} نهائيًا؟ ما يمكن التراجع عن هذا الإجراء.`)) return;
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      deleteDoc(doc(window.db, "bookings", id)).catch(()=>{
+        alert("ما قدرنا نحذف الحجز، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      });
+    } else {
+      state.bookings = state.bookings.filter(x => !idEq(x.id, id));
+      saveBookingsLocal();
+      renderAll();
+    }
   }
 
   function renderAll(){
@@ -694,10 +759,10 @@
     foot.textContent = `${toArabicDigits(state.workers.length)} عاملة`;
 
     tbody.querySelectorAll('[data-edit-worker]').forEach(btn=>{
-      btn.addEventListener('click', ()=> openWorkerModal(Number(btn.dataset.editWorker)));
+      btn.addEventListener('click', ()=> openWorkerModal(btn.dataset.editWorker));
     });
     tbody.querySelectorAll('[data-delete-worker]').forEach(btn=>{
-      btn.addEventListener('click', ()=> deleteWorker(Number(btn.dataset.deleteWorker)));
+      btn.addEventListener('click', ()=> deleteWorker(btn.dataset.deleteWorker));
     });
   }
 
@@ -723,7 +788,7 @@
     areaList.innerHTML = Array.from(new Set(state.workers.map(w => w.area))).map(a => `<option value="${a}">`).join('');
 
     if(isEdit){
-      const w = state.workers.find(x => x.id === id);
+      const w = state.workers.find(x => idEq(x.id, id));
       document.getElementById('wId').value = w.id;
       document.getElementById('wName').value = w.name;
       document.getElementById('wArea').value = w.area;
@@ -746,13 +811,20 @@
   }
 
   function deleteWorker(id){
-    const w = state.workers.find(x => x.id === id);
+    const w = state.workers.find(x => idEq(x.id, id));
     if(!w) return;
     if(!confirm(`تأكيد حذف "${w.name}"؟ لن تظهر بعدها في صفحة الحجز.`)) return;
-    state.workers = state.workers.filter(x => x.id !== id);
-    saveWorkers();
-    renderWorkersTable();
-    renderWorkerFilterOptions();
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      deleteDoc(doc(window.db, "workers", id)).catch(()=>{
+        alert("ما قدرنا نحذف العاملة، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      });
+    } else {
+      state.workers = state.workers.filter(x => !idEq(x.id, id));
+      saveWorkersLocal();
+      renderWorkersTable();
+      renderWorkerFilterOptions();
+    }
   }
 
   document.getElementById('addWorkerBtn').addEventListener('click', ()=> openWorkerModal(null));
@@ -777,23 +849,38 @@
       return;
     }
 
-    if(idField){
-      const w = state.workers.find(x => x.id === Number(idField));
-      if(w){
-        w.name = name; w.area = area; w.price = price; w.rating = rating;
-        w.tags = tags; w.color = state.selectedColor; w.initials = initialsFromName(name);
-      }
-    } else {
-      const nextId = state.workers.length ? Math.max(...state.workers.map(w => w.id)) + 1 : 1;
-      state.workers.push({
-        id: nextId, name, area, price, rating, reviews: 0, tags,
-        color: state.selectedColor, initials: initialsFromName(name)
+    const workerData = {
+      name, area, price, rating, tags,
+      color: state.selectedColor, initials: initialsFromName(name)
+    };
+
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { collection, addDoc, doc, updateDoc } = window.fb;
+      const savePromise = idField
+        ? updateDoc(doc(window.db, "workers", idField), workerData)
+        : addDoc(collection(window.db, "workers"), { ...workerData, reviews: 0 });
+      savePromise.then(()=>{
+        closeWorkerModal();
+      }).catch(()=>{
+        alert("ما قدرنا نحفظ بيانات العاملة، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
       });
+    } else {
+      if(idField){
+        const w = state.workers.find(x => idEq(x.id, idField));
+        if(w){
+          w.name = name; w.area = area; w.price = price; w.rating = rating;
+          w.tags = tags; w.color = state.selectedColor; w.initials = initialsFromName(name);
+        }
+      } else {
+        const numericIds = state.workers.map(w => Number(w.id)).filter(n => !isNaN(n));
+        const nextId = numericIds.length ? Math.max(...numericIds) + 1 : 1;
+        state.workers.push({ id: nextId, ...workerData, reviews: 0 });
+      }
+      saveWorkersLocal();
+      renderWorkersTable();
+      renderWorkerFilterOptions();
+      closeWorkerModal();
     }
-    saveWorkers();
-    renderWorkersTable();
-    renderWorkerFilterOptions();
-    closeWorkerModal();
   });
 
   /* ---------------- Preview modal ---------------- */
@@ -802,10 +889,10 @@
     const conflicts = conflictingWith(b);
     return `
       <div class="receipt-ref">
-        <div class="r">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</div>
+        <div class="r">${fmtRef(b.id)}</div>
         <div class="s"><span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span></div>
       </div>
-      ${conflicts.length ? `<div class="conflict-banner">⚠ تعارض توقيت مع ${conflicts.map(c => c.ref || ("SA-"+String(c.id).padStart(5,"0"))).join('، ')} — نفس العاملة ونفس الساعات بنفس اليوم.</div>` : ''}
+      ${conflicts.length ? `<div class="conflict-banner">⚠ تعارض توقيت مع ${conflicts.map(c => fmtRef(c.id)).join('، ')} — نفس العاملة ونفس الساعات بنفس اليوم.</div>` : ''}
       <div class="receipt-rows" style="margin-bottom:16px;">
         <div class="receipt-row"><span>العميلة</span><span>${b.customerName || '—'}</span></div>
         <div class="receipt-row"><span>رقم الجوال</span><span>${b.customerPhone || '—'}</span></div>
@@ -843,7 +930,7 @@
   }
 
   function openPreview(id){
-    const b = state.bookings.find(x => x.id === id);
+    const b = state.bookings.find(x => idEq(x.id, id));
     if(!b) return;
     state.previewId = id;
     document.getElementById('receiptBody').innerHTML = receiptHTML(b);
@@ -861,26 +948,37 @@
     if(e.target.id === 'modalOverlay') closePreview();
   });
   document.getElementById('modalCancelToggleBtn').addEventListener('click', ()=>{
-    const b = state.bookings.find(x => x.id === state.previewId);
+    const b = state.bookings.find(x => idEq(x.id, state.previewId));
     if(!b) return;
+    let newStatus;
     if(b.status === 'cancelled'){
       // Restoring: block if it would collide with an already-confirmed booking
       const wouldConflict = state.bookings.some(other =>
-        other.id !== b.id && other.status !== 'cancelled' &&
-        other.workerId === b.workerId && other.dateISO === b.dateISO &&
+        !idEq(other.id, b.id) && other.status !== 'cancelled' &&
+        idEq(other.workerId, b.workerId) && other.dateISO === b.dateISO &&
         (other.hours || []).some(h => (b.hours || []).includes(h))
       );
       if(wouldConflict){
         alert("ما ينقدر يتم استعادة هذا الحجز — نفس العاملة محجوزة بنفس الساعات في نفس اليوم لحجز مؤكد آخر. ألغي أو عدّلي الحجز المتعارض أولًا.");
         return;
       }
-      b.status = 'confirmed';
+      newStatus = 'confirmed';
     } else {
-      b.status = 'cancelled';
+      newStatus = 'cancelled';
     }
-    saveBookings();
-    renderAll();
-    openPreview(b.id);
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, updateDoc } = window.fb;
+      updateDoc(doc(window.db, "bookings", b.id), { status: newStatus }).then(()=>{
+        openPreview(b.id);
+      }).catch(()=>{
+        alert("ما قدرنا نحدّث حالة الحجز، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      });
+    } else {
+      b.status = newStatus;
+      saveBookingsLocal();
+      renderAll();
+      openPreview(b.id);
+    }
   });
   document.getElementById('printReceiptBtn').addEventListener('click', ()=>{
     if(state.previewId != null) printReceipt(state.previewId);
@@ -888,12 +986,12 @@
 
   /* ---------------- Printing ---------------- */
   function printReceipt(id){
-    const b = state.bookings.find(x => x.id === id);
+    const b = state.bookings.find(x => idEq(x.id, id));
     if(!b) return;
     document.getElementById('printReceipt').innerHTML = `
       <div class="print-receipt-card">
         <div class="print-title">شركة المنى لتوريد العاملات — إيصال حجز</div>
-        <div class="print-sub">${b.ref || ("SA-" + String(b.id).padStart(5,"0"))} · طُبع في ${fmtCreated(new Date().toISOString())}</div>
+        <div class="print-sub">${fmtRef(b.id)} · طُبع في ${fmtCreated(new Date().toISOString())}</div>
         ${receiptHTML(b)}
       </div>
     `;
@@ -922,7 +1020,7 @@
         <td>${b.customerAddress || '—'}</td>
         <td>${fmtPrice(b.total)}</td>
         <td>${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</td>
-        <td>${b.ref || ("SA-" + String(b.id).padStart(5,"0"))}</td>
+        <td>${fmtRef(b.id)}</td>
       </tr>
     `).join('');
     document.getElementById('printReport').innerHTML = `
@@ -950,7 +1048,7 @@
     const list = getScheduleOrderedList();
     if(list.length === 0){ alert("ما فيه حجوزات لتصديرها"); return; }
     const rows = list.map(b => ({
-      "رقم الحجز": b.ref || ("SA-" + String(b.id).padStart(5,"0")),
+      "رقم الحجز": fmtRef(b.id),
       "التاريخ": b.dateLabel || "",
       "الوقت": (b.hours || []).map(fmtHour).join(' ، '),
       "العاملة": b.workerName || "",
@@ -986,9 +1084,16 @@
   document.getElementById('clearAllBtn').addEventListener('click', ()=>{
     if(state.bookings.length === 0) return;
     if(!confirm(`تأكيد حذف جميع الحجوزات (${state.bookings.length}) نهائيًا؟ هذا مفيد لتنظيف بيانات تجريبية، ولا يمكن التراجع عنه.`)) return;
-    state.bookings = [];
-    saveBookings();
-    renderAll();
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      Promise.all(state.bookings.map(b => deleteDoc(doc(window.db, "bookings", b.id)))).catch(()=>{
+        alert("صار خطأ أثناء حذف بعض الحجوزات، جربي مرة ثانية");
+      });
+    } else {
+      state.bookings = [];
+      saveBookingsLocal();
+      renderAll();
+    }
   });
 
   window.addEventListener('afterprint', ()=>{
@@ -1013,26 +1118,49 @@
     renderTable();
   });
   document.getElementById('refreshBtn').addEventListener('click', ()=>{
-    loadBookings();
-    loadWorkers();
-    renderAll();
+    if(window.FIREBASE_CONFIGURED && window.db){
+      // Live listeners already keep data current — this is just a visual reassurance re-render
+      renderAll();
+    } else {
+      loadBookingsLocal();
+      loadWorkersLocal();
+      renderAll();
+    }
   });
 
-  window.addEventListener('storage', (e)=>{
-    if(e.key === STORAGE_KEY){
-      loadBookings();
-      renderAll();
-    }
-    if(e.key === WORKERS_STORAGE_KEY){
-      loadWorkers();
-      renderAll();
-    }
-  });
+  function initLocalMode(){
+    loadBookingsLocal();
+    loadWorkersLocal();
+    renderAll();
+
+    // Same-device, cross-tab convenience only (does NOT sync across different devices)
+    window.addEventListener('storage', (e)=>{
+      if(e.key === STORAGE_KEY){
+        loadBookingsLocal();
+        renderAll();
+      }
+      if(e.key === WORKERS_STORAGE_KEY){
+        loadWorkersLocal();
+        renderAll();
+      }
+    });
+  }
+
+  function initCloudMode(){
+    subscribeWorkersCloud();
+    subscribeBookingsCloud();
+  }
 
   /* ---------------- Init ---------------- */
-  loadBookings();
-  loadWorkers();
-  renderAll();
+  if(window.FIREBASE_CONFIGURED){
+    if(window.db){
+      initCloudMode();
+    } else {
+      window.addEventListener('firebase-ready', initCloudMode, { once:true });
+    }
+  } else {
+    initLocalMode();
+  }
 })();
 </script>
 </body>
