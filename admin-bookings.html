@@ -453,6 +453,14 @@
 <div class="sync-status" id="syncStatus"></div>
 
 <script>
+window.addEventListener('error', (e)=>{
+  alert("⚠️ خطأ غير متوقع بالصفحة:\n" + (e.message || e) + "\nسطر: " + e.lineno + ":" + e.colno);
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  const reason = e.reason;
+  const msg = reason && reason.message ? reason.message : String(reason);
+  alert("⚠️ عملية غير مكتملة (rejected promise):\n" + msg);
+});
 (() => {
   const STORAGE_KEY = "saa_bookings_v1";
   const WORKERS_STORAGE_KEY = "saa_workers_v1";
