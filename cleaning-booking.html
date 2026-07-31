@@ -572,6 +572,12 @@
 <div class="sync-status" id="syncStatus"></div>
 
 <script>
+window.addEventListener('error', (e)=>{
+  console.error('Uncaught error:', e.message, e.filename, e.lineno);
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  console.error('Unhandled promise rejection:', e.reason);
+});
 (function(){
   "use strict";
 
