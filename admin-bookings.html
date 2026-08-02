@@ -451,15 +451,23 @@
 </div>
 
 <div class="sync-status" id="syncStatus"></div>
+<div id="debugPanel" style="position:fixed; top:0; left:0; right:0; z-index:999; background:#111; color:#0f0; font-family:monospace; font-size:11px; max-height:40vh; overflow-y:auto; padding:8px; direction:ltr; text-align:left; white-space:pre-wrap; display:none;"></div>
 
 <script>
+function debugLog(msg){
+  const panel = document.getElementById('debugPanel');
+  if(!panel) return;
+  panel.style.display = 'block';
+  const time = new Date().toLocaleTimeString();
+  panel.textContent = "[" + time + "] " + msg + "\n\n" + panel.textContent;
+}
 window.addEventListener('error', (e)=>{
-  alert("⚠️ خطأ غير متوقع بالصفحة:\n" + (e.message || e) + "\nسطر: " + e.lineno + ":" + e.colno);
+  debugLog("⚠️ JS ERROR: " + (e.message || e) + " (line " + e.lineno + ":" + e.colno + ")");
 });
 window.addEventListener('unhandledrejection', (e)=>{
   const reason = e.reason;
   const msg = reason && reason.message ? reason.message : String(reason);
-  alert("⚠️ عملية غير مكتملة (rejected promise):\n" + msg);
+  debugLog("⚠️ UNHANDLED PROMISE REJECTION: " + msg);
 });
 (() => {
   const STORAGE_KEY = "saa_bookings_v1";
@@ -530,7 +538,7 @@ window.addEventListener('unhandledrejection', (e)=>{
   function seedDefaultWorkersCloud(){
     if(seedingAttempted) return;
     seedingAttempted = true;
-    alert("تنبيه تشخيصي: مجموعة العاملات فاضية بقاعدة البيانات — جاري إنشاء العاملات الافتراضية الآن...");
+    debugLog("مجموعة العاملات فاضية — جاري إنشاء العاملات الافتراضية الآن...");
     const { collection, addDoc } = window.fb;
     let succeeded = 0, failed = 0, firstError = null;
     const total = DEFAULT_WORKERS.length;
@@ -539,14 +547,14 @@ window.addEventListener('unhandledrejection', (e)=>{
       addDoc(collection(window.db, "workers"), data).then(()=>{
         succeeded++;
         if(succeeded + failed === total){
-          alert("نتيجة الزراعة: نجح " + succeeded + " من " + total + (failed ? (" — أول خطأ: " + firstError) : ""));
+          debugLog("نتيجة الزراعة: نجح " + succeeded + " من " + total + (failed ? (" — أول خطأ: " + firstError) : ""));
         }
       }).catch(err=>{
         failed++;
         if(!firstError) firstError = (err && err.message ? err.message : err);
         console.error('Failed to seed default worker:', err);
         if(succeeded + failed === total){
-          alert("نتيجة الزراعة: نجح " + succeeded + " من " + total + " — أول خطأ: " + firstError);
+          debugLog("نتيجة الزراعة: نجح " + succeeded + " من " + total + " — أول خطأ: " + firstError);
         }
       });
     });
@@ -560,6 +568,7 @@ window.addEventListener('unhandledrejection', (e)=>{
       markCloudConnected();
       const fromCloud = [];
       snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
+      debugLog("WORKERS SNAPSHOT — عدد السجلات المستلمة: " + fromCloud.length + (fromCloud.length ? " | أول id: " + fromCloud[0].id : ""));
       if(fromCloud.length === 0){
         seedDefaultWorkersCloud();
         state.workers = DEFAULT_WORKERS; // shown as read-only placeholders until the seed completes
@@ -569,6 +578,7 @@ window.addEventListener('unhandledrejection', (e)=>{
       renderAll();
     }, (err)=>{
       console.error('Firestore workers sync error:', err);
+      debugLog("WORKERS SNAPSHOT ERROR: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?"));
       fallbackToLocalMode('workers-error');
     });
   }
@@ -883,12 +893,12 @@ window.addEventListener('unhandledrejection', (e)=>{
     if(window.FIREBASE_CONFIGURED && window.db){
       const { doc, deleteDoc } = window.fb;
       deleteDoc(doc(window.db, "workers", id)).then(()=>{
-        alert("تم إرسال طلب الحذف بنجاح لقاعدة البيانات (معرف: " + id + ")");
+        debugLog("DELETE SUCCESS — تم إرسال طلب الحذف بنجاح (معرف: " + id + ")");
       }).catch((err)=>{
-        alert("فشل الحذف — رسالة الخطأ: " + (err && err.message ? err.message : err));
+        debugLog("DELETE FAILED — رسالة الخطأ: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?"));
       });
     } else {
-      alert("تنبيه تشخيصي: الموقع بوضع محلي مو سحابي (FIREBASE_CONFIGURED=" + window.FIREBASE_CONFIGURED + ", db=" + !!window.db + ")");
+      debugLog("LOCAL MODE (not cloud) — FIREBASE_CONFIGURED=" + window.FIREBASE_CONFIGURED + ", db=" + !!window.db);
       state.workers = state.workers.filter(x => !idEq(x.id, id));
       saveWorkersLocal();
       renderWorkersTable();
@@ -929,10 +939,10 @@ window.addEventListener('unhandledrejection', (e)=>{
         ? updateDoc(doc(window.db, "workers", idField), workerData)
         : addDoc(collection(window.db, "workers"), { ...workerData, reviews: 0 });
       savePromise.then(()=>{
-        alert("تم الحفظ بنجاح بقاعدة البيانات (idField=" + (idField || "جديد") + ")");
+        debugLog("SAVE SUCCESS — تم الحفظ بنجاح (idField=" + (idField || "جديد") + ")");
         closeWorkerModal();
       }).catch((err)=>{
-        alert("فشل الحفظ — رسالة الخطأ: " + (err && err.message ? err.message : err) + "\n(idField=" + (idField || "جديد") + ")");
+        debugLog("SAVE FAILED — رسالة الخطأ: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?") + " | idField=" + (idField || "جديد"));
       });
     } else {
       if(idField){
@@ -1227,12 +1237,14 @@ window.addEventListener('unhandledrejection', (e)=>{
     if(cloudFallbackDone || cloudConnected) return;
     cloudFallbackDone = true;
     console.warn('Switching to local storage mode:', reason);
+    debugLog("FALLBACK TO LOCAL MODE — السبب: " + reason);
     setSyncStatus(false);
     initLocalMode();
   }
   function markCloudConnected(){
     if(cloudConnected) return;
     cloudConnected = true;
+    debugLog("CLOUD CONNECTED ✓ — أول قراءة ناجحة من Firestore وصلت");
     setSyncStatus(true);
   }
   function setSyncStatus(isCloud){
