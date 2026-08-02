@@ -569,12 +569,7 @@ window.addEventListener('unhandledrejection', (e)=>{
       const fromCloud = [];
       snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
       debugLog("WORKERS SNAPSHOT — عدد السجلات المستلمة: " + fromCloud.length + (fromCloud.length ? " | أول id: " + fromCloud[0].id : ""));
-      if(fromCloud.length === 0){
-        seedDefaultWorkersCloud();
-        state.workers = DEFAULT_WORKERS; // shown as read-only placeholders until the seed completes
-      } else {
-        state.workers = fromCloud;
-      }
+      state.workers = fromCloud; // real cloud records only — no fake placeholder rows, ever
       renderAll();
     }, (err)=>{
       console.error('Firestore workers sync error:', err);

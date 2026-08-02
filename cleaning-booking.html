@@ -632,12 +632,7 @@ window.addEventListener('unhandledrejection', (e)=>{
       markCloudConnected();
       const fromCloud = [];
       snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
-      if(fromCloud.length === 0){
-        seedDefaultWorkersCloud();
-        WORKERS = DEFAULT_WORKERS;
-      } else {
-        WORKERS = fromCloud;
-      }
+      WORKERS = fromCloud; // real cloud records only — no fake placeholder rows, ever
       onWorkersChanged();
     }, (err)=>{
       console.error('Firestore workers sync error:', err);
