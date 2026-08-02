@@ -530,11 +530,24 @@ window.addEventListener('unhandledrejection', (e)=>{
   function seedDefaultWorkersCloud(){
     if(seedingAttempted) return;
     seedingAttempted = true;
+    alert("تنبيه تشخيصي: مجموعة العاملات فاضية بقاعدة البيانات — جاري إنشاء العاملات الافتراضية الآن...");
     const { collection, addDoc } = window.fb;
+    let succeeded = 0, failed = 0, firstError = null;
+    const total = DEFAULT_WORKERS.length;
     DEFAULT_WORKERS.forEach(w => {
       const { id, ...data } = w; // let Firestore generate the real doc id
-      addDoc(collection(window.db, "workers"), data).catch(err=>{
+      addDoc(collection(window.db, "workers"), data).then(()=>{
+        succeeded++;
+        if(succeeded + failed === total){
+          alert("نتيجة الزراعة: نجح " + succeeded + " من " + total + (failed ? (" — أول خطأ: " + firstError) : ""));
+        }
+      }).catch(err=>{
+        failed++;
+        if(!firstError) firstError = (err && err.message ? err.message : err);
         console.error('Failed to seed default worker:', err);
+        if(succeeded + failed === total){
+          alert("نتيجة الزراعة: نجح " + succeeded + " من " + total + " — أول خطأ: " + firstError);
+        }
       });
     });
     // The onSnapshot listener below will pick up the newly-created real
@@ -916,9 +929,10 @@ window.addEventListener('unhandledrejection', (e)=>{
         ? updateDoc(doc(window.db, "workers", idField), workerData)
         : addDoc(collection(window.db, "workers"), { ...workerData, reviews: 0 });
       savePromise.then(()=>{
+        alert("تم الحفظ بنجاح بقاعدة البيانات (idField=" + (idField || "جديد") + ")");
         closeWorkerModal();
-      }).catch(()=>{
-        alert("ما قدرنا نحفظ بيانات العاملة، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      }).catch((err)=>{
+        alert("فشل الحفظ — رسالة الخطأ: " + (err && err.message ? err.message : err) + "\n(idField=" + (idField || "جديد") + ")");
       });
     } else {
       if(idField){
