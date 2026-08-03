@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدارة | شركة المنى لتوريد العاملات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  /* Same Firebase project as cleaning-booking.html — paste the identical 6 values here. */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAY1M6Db9WlBK683K6Yf8gAARWvPDGCz14",
+    authDomain: "almunabooking.firebaseapp.com",
+    projectId: "almunabooking",
+    storageBucket: "almunabooking.firebasestorage.app",
+    messagingSenderId: "770090424936",
+    appId: "1:770090424936:web:5d56334cf3c1949793b9dd"
+  };
+  const FIREBASE_CONFIGURED = firebaseConfig.apiKey.indexOf("YOUR_") !== 0;
+  window.FIREBASE_CONFIGURED = FIREBASE_CONFIGURED;
+
+  if(FIREBASE_CONFIGURED){
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js").then(({ initializeApp }) => {
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js").then((fs) => {
+        const app = initializeApp(firebaseConfig);
+        const db = fs.getFirestore(app);
+        window.db = db;
+        window.fb = fs;
+        window.dispatchEvent(new Event('firebase-ready'));
+      }).catch((err)=>{
+        console.error('Failed to load Firestore SDK:', err);
+        window.dispatchEvent(new Event('firebase-not-configured'));
+      });
+    }).catch((err)=>{
+      console.error('Failed to load Firebase app SDK:', err);
+      window.dispatchEvent(new Event('firebase-not-configured'));
+    });
+  } else {
+    window.dispatchEvent(new Event('firebase-not-configured'));
+  }
+</script>
+<style>
+  :root{
+    --bg: #F6FAF9;
+    --deep: #0E3B39;
+    --teal: #2F9E8F;
+    --teal-light: #E6F3F1;
+    --amber: #F2A20C;
+    --amber-dark: #C97F00;
+    --line: #DCEAE8;
+    --muted: #5B6B6A;
+    --white: #FFFFFF;
+    --danger: #C9503D;
+    --danger-light: #FBEAE7;
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--deep);
+    font-family:'Tajawal', sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3,.display{
+    font-family:'Cairo', sans-serif;
+    font-weight:800;
+    color:var(--deep);
+    margin:0;
+  }
+  .container{ max-width:1240px; margin:0 auto; padding:0 24px; }
+  a{ color:inherit; }
+
+  /* ---------- Header ---------- */
+  header.site{
+    position:sticky; top:0; z-index:50;
+    background:rgba(246,250,249,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 0; gap:16px; flex-wrap:wrap; }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'Cairo',sans-serif; font-weight:900; font-size:1.05rem; color:var(--deep); }
+  .brand img{ height:38px; width:auto; display:block; }
+  .brand .dot{ width:12px;height:12px;border-radius:50%;background:var(--amber); box-shadow:0 0 0 4px var(--teal-light); }
+  .brand .tag{
+    font-family:'Tajawal',sans-serif; font-weight:700; font-size:.72rem; color:var(--teal);
+    background:var(--teal-light); border-radius:999px; padding:4px 12px; margin-inline-start:6px;
+  }
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; color:var(--muted); font-size:.9rem;
+    border:1px solid var(--line); border-radius:999px; padding:9px 18px; transition:all .2s;
+  }
+  .back-link:hover{ color:var(--teal); border-color:var(--teal); }
+
+  main{ padding:36px 0 70px; }
+
+  .page-head{ margin-bottom:26px; display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+  .page-head h1{ font-size:clamp(1.5rem,2.4vw,2rem); margin-bottom:6px; }
+  .page-head p{ color:var(--muted); font-size:.92rem; margin:0; max-width:60ch; }
+
+  .sync-note{
+    display:flex; align-items:center; gap:8px; background:var(--teal-light); color:var(--deep);
+    border-radius:14px; padding:11px 16px; font-size:.82rem; margin-bottom:24px;
+  }
+  .sync-note strong{ color:var(--teal); }
+
+  /* ---------- Stats ---------- */
+  .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:28px; }
+  .stat-card{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius); padding:20px;
+  }
+  .stat-card .label{ color:var(--muted); font-size:.8rem; font-weight:700; margin-bottom:8px; }
+  .stat-card .value{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.6rem; color:var(--deep); }
+  .stat-card.confirmed .value{ color:var(--teal); }
+  .stat-card.cancelled .value{ color:var(--danger); }
+  .stat-card.revenue .value{ color:var(--amber-dark); }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px;
+  }
+  .toolbar input[type="search"], .toolbar select{
+    font-family:'Tajawal',sans-serif; border:1px solid var(--line); border-radius:12px; padding:10px 14px;
+    font-size:.88rem; color:var(--deep); background:var(--bg); outline:none; transition:border-color .2s;
+  }
+  .toolbar input[type="search"]{ flex:1 1 220px; min-width:180px; }
+  .toolbar select{ cursor:pointer; }
+  .toolbar input:focus, .toolbar select:focus{ border-color:var(--teal); }
+  .toolbar .spacer{ flex:1 1 auto; }
+  .btn{
+    font-family:'Tajawal',sans-serif; font-weight:700; font-size:.85rem; border-radius:999px; padding:10px 20px;
+    cursor:pointer; border:none; transition:transform .15s, background .2s, box-shadow .2s; white-space:nowrap;
+  }
+  .btn-teal{ background:var(--teal); color:var(--white); }
+  .btn-teal:hover{ background:var(--deep); }
+  .btn-amber{ background:var(--amber); color:var(--deep); box-shadow:0 8px 18px -9px rgba(242,162,12,.7); }
+  .btn-amber:hover{ transform:translateY(-1px); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--deep); }
+  .btn-ghost:hover{ border-color:var(--teal); background:var(--teal-light); }
+  .btn-danger-outline{ background:transparent; border:1px solid var(--danger); color:var(--danger); }
+  .btn-danger-outline:hover{ background:var(--danger); color:var(--white); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+  .btn.small{ padding:7px 14px; font-size:.78rem; }
+
+  /* ---------- Table ---------- */
+  .table-card{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  }
+  table{ width:100%; border-collapse:collapse; font-size:.87rem; }
+  thead th{
+    text-align:right; padding:14px 16px; background:var(--teal-light); color:var(--deep);
+    font-family:'Cairo',sans-serif; font-weight:800; font-size:.8rem; white-space:nowrap;
+  }
+  tbody td{ padding:14px 16px; border-top:1px solid var(--line); vertical-align:middle; }
+  tbody tr:hover{ background:var(--bg); }
+  .ref-cell{ font-family:'Cairo',sans-serif; font-weight:800; color:var(--deep); }
+  .worker-cell{ display:flex; align-items:center; gap:10px; }
+  .avatar-sm{
+    width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+    font-family:'Cairo',sans-serif; font-weight:800; color:var(--white); font-size:.85rem; flex-shrink:0;
+  }
+  .worker-name-sm{ font-weight:700; font-size:.88rem; }
+  .worker-area-sm{ color:var(--muted); font-size:.76rem; }
+  .hours-cell{ color:var(--muted); font-size:.8rem; max-width:220px; }
+  .total-cell{ font-family:'Cairo',sans-serif; font-weight:800; }
+  .status-pill{ display:inline-block; border-radius:999px; padding:5px 13px; font-size:.76rem; font-weight:700; }
+  .status-pill.confirmed{ background:#E9F7EE; color:#1E8A4C; }
+  .status-pill.cancelled{ background:var(--danger-light); color:var(--danger); }
+  .status-pill.conflict{ background:#FBEAE7; color:var(--danger); margin-inline-start:6px; }
+  tr.conflict-row{ background:#FDF4F2; }
+  tr.conflict-row:hover{ background:#FBEAE7; }
+  .conflict-banner{
+    background:var(--danger-light); color:var(--danger); border-radius:12px; padding:10px 14px;
+    font-size:.8rem; font-weight:700; margin-bottom:16px; text-align:center;
+  }
+  .created-cell{ color:var(--muted); font-size:.78rem; white-space:nowrap; }
+  .actions-cell{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .empty-row td{ padding:60px 20px; text-align:center; color:var(--muted); }
+  .empty-row strong{ display:block; font-family:'Cairo',sans-serif; color:var(--deep); font-size:1.05rem; margin-bottom:8px; }
+  .empty-row a{ color:var(--teal); font-weight:700; text-decoration:underline; }
+
+  .table-foot{ padding:14px 18px; color:var(--muted); font-size:.8rem; border-top:1px solid var(--line); }
+
+  /* ---------- Modal / preview ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(14,59,57,.55); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:200;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--white); border-radius:24px; max-width:440px; width:100%; max-height:88vh; overflow-y:auto;
+    padding:0; box-shadow:0 30px 60px -20px rgba(14,59,57,.4);
+  }
+  .modal-head{
+    background:var(--deep); color:var(--white); padding:22px 24px; border-radius:24px 24px 0 0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-head .brand-mini{ font-family:'Cairo',sans-serif; font-weight:900; display:flex; align-items:center; gap:8px; }
+  .modal-head .brand-mini .dot{ width:9px;height:9px;border-radius:50%;background:var(--amber); }
+  .modal-close{ background:rgba(255,255,255,.12); border:none; color:var(--white); width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:1rem; line-height:1; }
+  .modal-close:hover{ background:rgba(255,255,255,.22); }
+  .receipt-body{ padding:24px; }
+  .receipt-ref{ text-align:center; margin-bottom:18px; }
+  .receipt-ref .r{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.3rem; letter-spacing:.5px; }
+  .receipt-ref .s{ color:var(--muted); font-size:.78rem; }
+  .receipt-worker{
+    display:flex; align-items:center; gap:12px; background:var(--teal-light); border-radius:16px; padding:14px; margin-bottom:18px;
+  }
+  .receipt-rows{ display:flex; flex-direction:column; gap:0; margin-bottom:10px; }
+  .receipt-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:.88rem; }
+  .receipt-row span:first-child{ color:var(--muted); }
+  .receipt-row span:last-child{ font-weight:700; text-align:left; max-width:60%; }
+  .receipt-total{
+    display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:14px;
+    border-top:2px solid var(--deep);
+  }
+  .receipt-total .l{ font-family:'Cairo',sans-serif; font-weight:800; font-size:1rem; }
+  .receipt-total .v{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; color:var(--teal); }
+  .payment-receipt-block{ margin-bottom:16px; }
+  .prb-label{ font-size:.8rem; font-weight:700; color:var(--muted); margin-bottom:8px; }
+  .prb-img{ width:100%; max-height:260px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:var(--bg); cursor:zoom-in; }
+  .modal-actions{ display:flex; gap:10px; padding:0 24px 24px; }
+  .modal-actions .btn{ flex:1; }
+
+  /* ---------- Worker management ---------- */
+  .worker-cell-name{ font-weight:700; font-size:.88rem; }
+  .tags-cell{ display:flex; flex-wrap:wrap; gap:6px; max-width:220px; }
+  .tag-pill{ background:var(--teal-light); color:var(--teal); border-radius:999px; padding:3px 10px; font-size:.74rem; font-weight:700; }
+  .rating-cell{ color:var(--amber-dark); font-weight:700; }
+
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:.82rem; font-weight:700; color:var(--muted); }
+  .field input{
+    font-family:'Tajawal',sans-serif; border:1px solid var(--line); border-radius:12px; padding:10px 14px;
+    font-size:.9rem; color:var(--deep); background:var(--bg); outline:none; transition:border-color .2s;
+  }
+  .field input:focus{ border-color:var(--teal); }
+  .color-swatches{ display:flex; gap:10px; flex-wrap:wrap; }
+  .color-swatch{
+    width:32px; height:32px; border-radius:10px; cursor:pointer; border:2px solid transparent; transition:transform .15s, border-color .2s;
+  }
+  .color-swatch:hover{ transform:translateY(-2px); }
+  .color-swatch.selected{ border-color:var(--deep); }
+
+  /* ---------- Print ---------- */
+  #printArea{ display:none; }
+  .print-title{ font-family:'Cairo',sans-serif; font-weight:900; font-size:1.4rem; margin-bottom:4px; }
+  .print-sub{ color:#555; font-size:.85rem; margin-bottom:18px; }
+  .print-table{ width:100%; border-collapse:collapse; font-size:.82rem; }
+  .print-table th, .print-table td{ border:1px solid #ccc; padding:8px 10px; text-align:right; word-break:break-word; }
+  .print-table th{ background:#eee; }
+  .print-receipt-card{ max-width:420px; margin:0 auto; border:1px solid #999; border-radius:10px; padding:22px; }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ position:absolute; top:0; left:0; width:100%; display:block !important; padding:20px; }
+    #printReport, #printReceipt{ display:none; }
+    body.print-mode-list #printReport{ display:block; }
+    body.print-mode-receipt #printReceipt{ display:block; }
+  }
+
+  @media (max-width: 980px){
+    .stats-grid{ grid-template-columns:1fr 1fr; }
+    table{ font-size:.8rem; }
+    thead th, tbody td{ padding:10px; }
+  }
+  @media (max-width: 620px){
+    .stats-grid{ grid-template-columns:1fr; }
+    .table-card{ overflow-x:auto; }
+    table{ min-width:920px; }
+    .brand{ font-size:.8rem; gap:6px; }
+    .brand img{ height:28px; }
+    .container{ padding:0 14px; }
+    .toolbar{ padding:14px; }
+    .toolbar .btn{ flex:1 1 auto; }
+    .field label{ font-size:.76rem; }
+    .field input{ font-size:.82rem; padding:9px 11px; }
+    .modal-head{ padding:16px 18px; }
+    .receipt-body{ padding:16px; }
+  }
+  .sync-status{
+    position:fixed; bottom:16px; right:16px; z-index:90; font-size:.72rem; font-weight:700;
+    padding:6px 12px; border-radius:999px; display:none; align-items:center; gap:6px;
+    box-shadow:0 6px 16px -6px rgba(0,0,0,.3);
+  }
+  .sync-status.show{ display:inline-flex; }
+  .sync-status.ok{ background:#E9F7EE; color:#1E8A4C; }
+  .sync-status.off{ background:var(--danger-light); color:var(--danger); }
+  .sync-status i{ width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
+  :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="container nav">
+    <div class="brand"><img src="logo.jpg" alt="شركة المنى لتوريد العاملات"> شركة المنى لتوريد العاملات <span class="tag">لوحة الإدارة</span></div>
+    <a class="back-link" href="cleaning-booking.html">↩ رجوع لموقع الحجز</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1>إدارة الحجوزات</h1>
+      <p>معاينة كل الحجوزات المؤكدة والملغاة وطباعتها — كتقرير كامل أو كإيصال حجز واحد.</p>
+    </div>
+  </div>
+
+  <div class="sync-note">
+    🔄 <span>تُقرأ هذه القائمة تلقائيًا من نفس المتصفح الذي تمت فيه عمليات الحجز. لضمان المزامنة، افتحي صفحة الحجز ولوحة الإدارة من <strong>نفس الموقع</strong> (وليس بفتح الملفات مباشرة من الجهاز).</span>
+  </div>
+
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="toolbar">
+    <input type="search" id="searchInput" placeholder="ابحثي برقم الحجز أو اسم العاملة أو اسم/جوال العميلة…">
+    <select id="statusFilter">
+      <option value="all">كل الحالات</option>
+      <option value="confirmed">المؤكدة فقط</option>
+      <option value="cancelled">الملغاة فقط</option>
+      <option value="conflict">فيها تعارض توقيت</option>
+    </select>
+    <select id="workerFilter">
+      <option value="all">كل العاملات</option>
+    </select>
+    <select id="sortOrder">
+      <option value="new">الأحدث أولًا</option>
+      <option value="old">الأقدم أولًا</option>
+    </select>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" id="refreshBtn">↻ تحديث</button>
+    <button class="btn btn-amber" id="printListBtn">🖨 طباعة جدول المواعيد</button>
+    <button class="btn btn-ghost" id="exportExcelBtn">📊 تصدير Excel</button>
+    <button class="btn btn-ghost" id="exportPdfBtn">📄 تصدير PDF</button>
+    <button class="btn btn-danger-outline" id="clearAllBtn">🗑 مسح كل الحجوزات</button>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>رقم الحجز</th>
+          <th>العميلة</th>
+          <th>العاملة</th>
+          <th>التاريخ</th>
+          <th>الساعات المحجوزة</th>
+          <th>الإجمالي</th>
+          <th>الحالة</th>
+          <th>تاريخ الإنشاء</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="bookingsTbody"></tbody>
+    </table>
+    <div class="table-foot" id="tableFoot"></div>
+  </div>
+
+  <!-- Workers management -->
+  <div class="page-head" style="margin-top:44px;">
+    <div>
+      <h1 style="font-size:clamp(1.3rem,2.2vw,1.7rem);">إدارة العاملات</h1>
+      <p>عدّلي الأسماء والمناطق والأسعار — التعديلات تظهر مباشرة في صفحة الحجز.</p>
+    </div>
+    <button class="btn btn-amber" id="addWorkerBtn">+ إضافة عاملة</button>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>العاملة</th>
+          <th>المنطقة</th>
+          <th>السعر / ساعة</th>
+          <th>التقييم</th>
+          <th>الخدمات</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="workersTbody"></tbody>
+    </table>
+    <div class="table-foot" id="workersFoot"></div>
+  </div>
+</main>
+
+<!-- Preview modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="brand-mini"><span class="dot"></span> شركة المنى — إيصال حجز</div>
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+    </div>
+    <div class="receipt-body" id="receiptBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancelToggleBtn"></button>
+      <button class="btn btn-teal" id="printReceiptBtn">🖨 طباعة الإيصال</button>
+    </div>
+  </div>
+</div>
+
+<!-- Worker add/edit modal -->
+<div class="modal-overlay" id="workerModalOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <div class="brand-mini"><span class="dot"></span> <span id="workerModalTitle">إضافة عاملة</span></div>
+      <button class="modal-close" id="workerModalCloseBtn">✕</button>
+    </div>
+    <form id="workerForm" class="receipt-body" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="field">
+        <label for="wName">الاسم</label>
+        <input type="text" id="wName" required placeholder="مثال: فاطمة العلي">
+      </div>
+      <div class="field">
+        <label for="wArea">المنطقة</label>
+        <input type="text" id="wArea" required placeholder="مثال: المنامة" list="areaSuggestions">
+        <datalist id="areaSuggestions"></datalist>
+      </div>
+      <div class="field">
+        <label for="wPrice">السعر للساعة الواحدة (د.ب)</label>
+        <input type="number" id="wPrice" required min="0" step="0.001" placeholder="مثال: 3.500">
+      </div>
+      <div class="field">
+        <label for="wRating">التقييم (اختياري، من ٥)</label>
+        <input type="number" id="wRating" min="0" max="5" step="0.1" placeholder="مثال: 4.8">
+      </div>
+      <div class="field">
+        <label for="wTags">الخدمات (افصلي بينها بفاصلة)</label>
+        <input type="text" id="wTags" placeholder="مثال: تنظيف عميق، نوافذ">
+      </div>
+      <div class="field">
+        <label>اللون المميز</label>
+        <div class="color-swatches" id="colorSwatches"></div>
+      </div>
+      <input type="hidden" id="wId">
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="workerCancelBtn" type="button">إلغاء</button>
+      <button class="btn btn-teal" id="workerSaveBtn" type="submit" form="workerForm">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden print-only containers -->
+<div id="printArea">
+  <div id="printReport"></div>
+  <div id="printReceipt"></div>
+</div>
+
+<div class="sync-status" id="syncStatus"></div>
+<div id="debugPanel" style="position:fixed; top:0; left:0; right:0; z-index:999; background:#111; color:#0f0; font-family:monospace; font-size:11px; max-height:40vh; overflow-y:auto; padding:8px; direction:ltr; text-align:left; white-space:pre-wrap; display:none;"></div>
+
+<script>
+function debugLog(msg){
+  const panel = document.getElementById('debugPanel');
+  if(!panel) return;
+  panel.style.display = 'block';
+  const time = new Date().toLocaleTimeString();
+  panel.textContent = "[" + time + "] " + msg + "\n\n" + panel.textContent;
+}
+window.addEventListener('error', (e)=>{
+  debugLog("⚠️ JS ERROR: " + (e.message || e) + " (line " + e.lineno + ":" + e.colno + ")");
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  const reason = e.reason;
+  const msg = reason && reason.message ? reason.message : String(reason);
+  debugLog("⚠️ UNHANDLED PROMISE REJECTION: " + msg);
+});
+(() => {
+  const STORAGE_KEY = "saa_bookings_v1";
+  const WORKERS_STORAGE_KEY = "saa_workers_v1";
+  const COLOR_PALETTE = ["#2F9E8F","#F2A20C","#0E3B39","#C9503D","#3E7CB1","#8A5FBF"];
+
+  // Compare ids reliably whether they're numbers (local mode) or Firestore doc-id strings (cloud mode)
+  function idEq(a, b){ return String(a) === String(b); }
+
+  const DEFAULT_WORKERS = [];
+
+  const state = {
+    bookings: [],
+    workers: [],
+    search: "",
+    status: "all",
+    worker: "all",
+    sort: "new",
+    previewId: null,
+    editingWorkerId: null,
+    selectedColor: COLOR_PALETTE[0]
+  };
+
+  function loadWorkersLocal(){
+    try{
+      const raw = localStorage.getItem(WORKERS_STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state.workers = Array.isArray(parsed) ? parsed : [];
+      } else {
+        state.workers = [];
+        localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers));
+      }
+    }catch(e){
+      state.workers = [];
+    }
+  }
+  function saveWorkersLocal(){
+    try{ localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers)); }catch(e){}
+  }
+  function initialsFromName(name){
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if(parts.length === 0) return "؟";
+    if(parts.length === 1) return parts[0].slice(0,2);
+    return parts[0][0] + " " + parts[1][0];
+  }
+
+  function loadBookingsLocal(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      state.bookings = raw ? JSON.parse(raw) : [];
+    }catch(e){
+      state.bookings = [];
+    }
+  }
+  function saveBookingsLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bookings)); }catch(e){}
+  }
+
+  let seedingAttempted = false;
+  function seedDefaultWorkersCloud(){
+    if(seedingAttempted) return;
+    seedingAttempted = true;
+    debugLog("مجموعة العاملات فاضية — جاري إنشاء العاملات الافتراضية الآن...");
+    const { collection, addDoc } = window.fb;
+    let succeeded = 0, failed = 0, firstError = null;
+    const total = DEFAULT_WORKERS.length;
+    DEFAULT_WORKERS.forEach(w => {
+      const { id, ...data } = w; // let Firestore generate the real doc id
+      addDoc(collection(window.db, "workers"), data).then(()=>{
+        succeeded++;
+        if(succeeded + failed === total){
+          debugLog("نتيجة الزراعة: نجح " + succeeded + " من " + total + (failed ? (" — أول خطأ: " + firstError) : ""));
+        }
+      }).catch(err=>{
+        failed++;
+        if(!firstError) firstError = (err && err.message ? err.message : err);
+        console.error('Failed to seed default worker:', err);
+        if(succeeded + failed === total){
+          debugLog("نتيجة الزراعة: نجح " + succeeded + " من " + total + " — أول خطأ: " + firstError);
+        }
+      });
+    });
+    // The onSnapshot listener below will pick up the newly-created real
+    // documents automatically once they're written — no manual re-render needed.
+  }
+
+  function subscribeWorkersCloud(){
+    const { collection, onSnapshot } = window.fb;
+    onSnapshot(collection(window.db, "workers"), (snap)=>{
+      markCloudConnected();
+      const fromCloud = [];
+      snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
+      debugLog("WORKERS SNAPSHOT — عدد السجلات المستلمة: " + fromCloud.length + (fromCloud.length ? " | أول id: " + fromCloud[0].id : ""));
+      state.workers = fromCloud; // real cloud records only — no fake placeholder rows, ever
+      renderAll();
+    }, (err)=>{
+      console.error('Firestore workers sync error:', err);
+      debugLog("WORKERS SNAPSHOT ERROR: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?"));
+      fallbackToLocalMode('workers-error');
+    });
+  }
+  function subscribeBookingsCloud(){
+    const { collection, onSnapshot } = window.fb;
+    onSnapshot(collection(window.db, "bookings"), (snap)=>{
+      markCloudConnected();
+      const fromCloud = [];
+      snap.forEach(docSnap => fromCloud.push({ id: docSnap.id, ...docSnap.data() }));
+      fromCloud.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      state.bookings = fromCloud;
+      renderAll();
+    }, (err)=>{
+      console.error('Firestore bookings sync error:', err);
+      fallbackToLocalMode('bookings-error');
+    });
+  }
+
+  function toArabicDigits(n){
+    const map = {'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+    return String(n).replace(/[0-9]/g, d => map[d]);
+  }
+  function fmtHour(h){
+    const period = h < 12 ? "ص" : "م";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ":00 " + period;
+  }
+  function fmtPrice(p){ return Number(p).toFixed(3) + " د.ب"; }
+  function fmtRef(id){
+    if(typeof id === "number") return "SA-" + String(id).padStart(5,"0");
+    return "SA-" + String(id).slice(-6).toUpperCase();
+  }
+  function fmtCreated(iso){
+    if(!iso) return "—";
+    const d = new Date(iso);
+    if(isNaN(d)) return "—";
+    return d.toLocaleDateString('ar', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+      " · " + d.toLocaleTimeString('ar', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  /* ---------------- Time-conflict detection ----------------
+     Two confirmed bookings for the SAME worker on the SAME date conflict
+     if they share any booked hour. Cancelled bookings never conflict. */
+  function getConflictingIds(){
+    const conflicting = new Set();
+    const confirmed = state.bookings.filter(b => b.status !== "cancelled");
+    for(let i=0;i<confirmed.length;i++){
+      for(let j=i+1;j<confirmed.length;j++){
+        const a = confirmed[i], b = confirmed[j];
+        if(!idEq(a.workerId, b.workerId) || a.dateISO !== b.dateISO) continue;
+        const aHours = a.hours || [], bHours = b.hours || [];
+        const overlap = aHours.some(h => bHours.includes(h));
+        if(overlap){ conflicting.add(a.id); conflicting.add(b.id); }
+      }
+    }
+    return conflicting;
+  }
+  function conflictingWith(booking){
+    if(!booking || booking.status === "cancelled") return [];
+    return state.bookings.filter(b =>
+      !idEq(b.id, booking.id) && b.status !== "cancelled" &&
+      idEq(b.workerId, booking.workerId) && b.dateISO === booking.dateISO &&
+      (b.hours || []).some(h => (booking.hours || []).includes(h))
+    );
+  }
+
+  function getFiltered(){
+    let list = state.bookings.slice();
+    if(state.status === "conflict"){
+      const conflictIds = getConflictingIds();
+      list = list.filter(b => conflictIds.has(b.id));
+    } else if(state.status !== "all"){
+      list = list.filter(b => b.status === state.status);
+    }
+    if(state.worker !== "all") list = list.filter(b => b.workerName === state.worker);
+    if(state.search.trim()){
+      const q = state.search.trim().toLowerCase();
+      list = list.filter(b =>
+        fmtRef(b.id).toLowerCase().includes(q) ||
+        (b.workerName || "").toLowerCase().includes(q) ||
+        (b.customerName || "").toLowerCase().includes(q) ||
+        (b.customerPhone || "").toLowerCase().includes(q) ||
+        String(b.id).includes(q)
+      );
+    }
+    list.sort((a,b) => {
+      const ta = new Date(a.createdAt || 0).getTime();
+      const tb = new Date(b.createdAt || 0).getTime();
+      return state.sort === "new" ? tb - ta : ta - tb;
+    });
+    return list;
+  }
+
+  function renderStats(){
+    const all = state.bookings;
+    const confirmed = all.filter(b => b.status === "confirmed");
+    const cancelled = all.filter(b => b.status === "cancelled");
+    const revenue = confirmed.reduce((sum,b) => sum + Number(b.total || 0), 0);
+    const conflicts = getConflictingIds().size;
+
+    const cards = [
+      { label:"إجمالي الحجوزات", value: toArabicDigits(all.length), cls:"" },
+      { label:"مؤكدة", value: toArabicDigits(confirmed.length), cls:"confirmed" },
+      { label:"ملغاة", value: toArabicDigits(cancelled.length), cls:"cancelled" },
+      { label:"تعارضات توقيت", value: toArabicDigits(conflicts), cls: conflicts > 0 ? "cancelled" : "" },
+      { label:"الإيراد المتوقع (المؤكدة)", value: fmtPrice(revenue), cls:"revenue" },
+    ];
+    document.getElementById('statsGrid').innerHTML = cards.map(c => `
+      <div class="stat-card ${c.cls}">
+        <div class="label">${c.label}</div>
+        <div class="value">${c.value}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderWorkerFilterOptions(){
+    const sel = document.getElementById('workerFilter');
+    const current = sel.value || "all";
+    const names = Array.from(new Set(state.bookings.map(b => b.workerName))).sort();
+    sel.innerHTML = `<option value="all">كل العاملات</option>` +
+      names.map(n => `<option value="${n}">${n}</option>`).join('');
+    sel.value = names.includes(current) ? current : "all";
+  }
+
+  function renderTable(){
+    const tbody = document.getElementById('bookingsTbody');
+    const list = getFiltered();
+    const foot = document.getElementById('tableFoot');
+    const conflictIds = getConflictingIds();
+
+    if(state.bookings.length === 0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">
+        <strong>لا توجد حجوزات بعد</strong>
+        الحجوزات التي يتم تأكيدها من <a href="cleaning-booking.html">صفحة الحجز</a> ستظهر هنا تلقائيًا.
+      </td></tr>`;
+      foot.textContent = "";
+      return;
+    }
+    if(list.length === 0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">
+        <strong>ما فيه نتائج مطابقة</strong>
+        جربي تعديل البحث أو الفلاتر.
+      </td></tr>`;
+      foot.textContent = "";
+      return;
+    }
+
+    tbody.innerHTML = list.map(b => {
+      const hasConflict = conflictIds.has(b.id);
+      return `
+      <tr class="${hasConflict ? 'conflict-row' : ''}">
+        <td class="ref-cell">${fmtRef(b.id)}</td>
+        <td>
+          <div class="worker-name-sm">${b.customerName || '—'}</div>
+          <div class="worker-area-sm">${b.customerPhone || ''}</div>
+        </td>
+        <td>
+          <div class="worker-cell">
+            <div class="avatar-sm" style="background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
+            <div>
+              <div class="worker-name-sm">${b.workerName}</div>
+              <div class="worker-area-sm">${b.workerArea || ""}</div>
+            </div>
+          </div>
+        </td>
+        <td>${b.dateLabel || ""}</td>
+        <td class="hours-cell">${(b.hours || []).map(fmtHour).join(' · ')}</td>
+        <td class="total-cell">${fmtPrice(b.total)}</td>
+        <td>
+          <span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span>
+          ${hasConflict ? '<span class="status-pill conflict">⚠ تعارض توقيت</span>' : ''}
+          ${b.customerReceiptImage ? '<span class="status-pill confirmed" title="فيه إيصال تحويل مرفق">📎 إيصال</span>' : ''}
+        </td>
+        <td class="created-cell">${fmtCreated(b.createdAt)}</td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-ghost small" data-preview="${b.id}">معاينة</button>
+            <button class="btn btn-teal small" data-print="${b.id}">🖨 طباعة</button>
+            <button class="btn btn-danger-outline small" data-delete="${b.id}">حذف نهائي</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join('');
+
+    foot.textContent = `عرض ${toArabicDigits(list.length)} من أصل ${toArabicDigits(state.bookings.length)} حجز`;
+
+    tbody.querySelectorAll('[data-preview]').forEach(btn=>{
+      btn.addEventListener('click', ()=> openPreview(btn.dataset.preview));
+    });
+    tbody.querySelectorAll('[data-print]').forEach(btn=>{
+      btn.addEventListener('click', ()=> printReceipt(btn.dataset.print));
+    });
+    tbody.querySelectorAll('[data-delete]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteBooking(btn.dataset.delete));
+    });
+  }
+
+  function deleteBooking(id){
+    const b = state.bookings.find(x => idEq(x.id, id));
+    if(!b) return;
+    if(!confirm(`تأكيد حذف الحجز ${fmtRef(b.id)} نهائيًا؟ ما يمكن التراجع عن هذا الإجراء.`)) return;
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      deleteDoc(doc(window.db, "bookings", id)).catch(()=>{
+        alert("ما قدرنا نحذف الحجز، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      });
+    } else {
+      state.bookings = state.bookings.filter(x => !idEq(x.id, id));
+      saveBookingsLocal();
+      renderAll();
+    }
+  }
+
+  function renderAll(){
+    renderStats();
+    renderWorkerFilterOptions();
+    renderTable();
+    renderWorkersTable();
+  }
+
+  /* ---------------- Workers table ---------------- */
+  function renderWorkersTable(){
+    const tbody = document.getElementById('workersTbody');
+    const foot = document.getElementById('workersFoot');
+    if(state.workers.length === 0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">
+        <strong>ما فيه عاملات مضافات</strong>
+        اضغطي "إضافة عاملة" عشان تبدئي.
+      </td></tr>`;
+      foot.textContent = "";
+      return;
+    }
+    tbody.innerHTML = state.workers.map(w => `
+      <tr>
+        <td>
+          <div class="worker-cell">
+            <div class="avatar-sm" style="background:${w.color || '#2F9E8F'}">${w.initials || initialsFromName(w.name)}</div>
+            <div class="worker-cell-name">${w.name}</div>
+          </div>
+        </td>
+        <td>${w.area}</td>
+        <td class="total-cell">${fmtPrice(w.price)}</td>
+        <td class="rating-cell">${w.rating ? '★ ' + Number(w.rating).toFixed(1) : '—'}</td>
+        <td><div class="tags-cell">${(w.tags||[]).map(t => `<span class="tag-pill">${t}</span>`).join('') || '—'}</div></td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-ghost small" data-edit-worker="${w.id}">تعديل</button>
+            <button class="btn btn-danger-outline small" data-delete-worker="${w.id}">حذف</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    foot.textContent = `${toArabicDigits(state.workers.length)} عاملة`;
+
+    tbody.querySelectorAll('[data-edit-worker]').forEach(btn=>{
+      btn.addEventListener('click', ()=> openWorkerModal(btn.dataset.editWorker));
+    });
+    tbody.querySelectorAll('[data-delete-worker]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteWorker(btn.dataset.deleteWorker));
+    });
+  }
+
+  function renderColorSwatches(){
+    const wrap = document.getElementById('colorSwatches');
+    wrap.innerHTML = COLOR_PALETTE.map(c => `
+      <div class="color-swatch ${c === state.selectedColor ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>
+    `).join('');
+    wrap.querySelectorAll('.color-swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        state.selectedColor = sw.dataset.color;
+        renderColorSwatches();
+      });
+    });
+  }
+
+  function openWorkerModal(id){
+    const isEdit = id != null;
+    state.editingWorkerId = isEdit ? id : null;
+    document.getElementById('workerModalTitle').textContent = isEdit ? "تعديل بيانات العاملة" : "إضافة عاملة";
+
+    const areaList = document.getElementById('areaSuggestions');
+    areaList.innerHTML = Array.from(new Set(state.workers.map(w => w.area))).map(a => `<option value="${a}">`).join('');
+
+    if(isEdit){
+      const w = state.workers.find(x => idEq(x.id, id));
+      document.getElementById('wId').value = w.id;
+      document.getElementById('wName').value = w.name;
+      document.getElementById('wArea').value = w.area;
+      document.getElementById('wPrice').value = w.price;
+      document.getElementById('wRating').value = w.rating || "";
+      document.getElementById('wTags').value = (w.tags || []).join('، ');
+      state.selectedColor = w.color || COLOR_PALETTE[0];
+    } else {
+      document.getElementById('workerForm').reset();
+      document.getElementById('wId').value = "";
+      state.selectedColor = COLOR_PALETTE[state.workers.length % COLOR_PALETTE.length];
+    }
+    renderColorSwatches();
+    document.getElementById('workerModalOverlay').classList.add('open');
+    document.getElementById('wName').focus();
+  }
+  function closeWorkerModal(){
+    document.getElementById('workerModalOverlay').classList.remove('open');
+    state.editingWorkerId = null;
+  }
+
+  function deleteWorker(id){
+    const w = state.workers.find(x => idEq(x.id, id));
+    if(!w) return;
+    if(!confirm(`تأكيد حذف "${w.name}"؟ لن تظهر بعدها في صفحة الحجز.`)) return;
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      deleteDoc(doc(window.db, "workers", id)).then(()=>{
+        debugLog("DELETE SUCCESS — تم إرسال طلب الحذف بنجاح (معرف: " + id + ")");
+      }).catch((err)=>{
+        debugLog("DELETE FAILED — رسالة الخطأ: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?"));
+      });
+    } else {
+      debugLog("LOCAL MODE (not cloud) — FIREBASE_CONFIGURED=" + window.FIREBASE_CONFIGURED + ", db=" + !!window.db);
+      state.workers = state.workers.filter(x => !idEq(x.id, id));
+      saveWorkersLocal();
+      renderWorkersTable();
+      renderWorkerFilterOptions();
+    }
+  }
+
+  document.getElementById('addWorkerBtn').addEventListener('click', ()=> openWorkerModal(null));
+  document.getElementById('workerModalCloseBtn').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerCancelBtn').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerModalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'workerModalOverlay') closeWorkerModal();
+  });
+
+  document.getElementById('workerForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('wName').value.trim();
+    const area = document.getElementById('wArea').value.trim();
+    const price = parseFloat(document.getElementById('wPrice').value);
+    const ratingRaw = document.getElementById('wRating').value;
+    const rating = ratingRaw ? parseFloat(ratingRaw) : null;
+    const tags = document.getElementById('wTags').value.split(/[،,]/).map(t => t.trim()).filter(Boolean);
+    const idField = document.getElementById('wId').value;
+
+    if(!name || !area || isNaN(price)){
+      alert("الاسم والمنطقة والسعر مطلوبين.");
+      return;
+    }
+
+    const workerData = {
+      name, area, price, rating, tags,
+      color: state.selectedColor, initials: initialsFromName(name)
+    };
+
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { collection, addDoc, doc, updateDoc } = window.fb;
+      const savePromise = idField
+        ? updateDoc(doc(window.db, "workers", idField), workerData)
+        : addDoc(collection(window.db, "workers"), { ...workerData, reviews: 0 });
+      savePromise.then(()=>{
+        debugLog("SAVE SUCCESS — تم الحفظ بنجاح (idField=" + (idField || "جديد") + ")");
+        closeWorkerModal();
+      }).catch((err)=>{
+        debugLog("SAVE FAILED — رسالة الخطأ: " + (err && err.message ? err.message : err) + " | code: " + (err && err.code ? err.code : "?") + " | idField=" + (idField || "جديد"));
+      });
+    } else {
+      if(idField){
+        const w = state.workers.find(x => idEq(x.id, idField));
+        if(w){
+          w.name = name; w.area = area; w.price = price; w.rating = rating;
+          w.tags = tags; w.color = state.selectedColor; w.initials = initialsFromName(name);
+        }
+      } else {
+        const numericIds = state.workers.map(w => Number(w.id)).filter(n => !isNaN(n));
+        const nextId = numericIds.length ? Math.max(...numericIds) + 1 : 1;
+        state.workers.push({ id: nextId, ...workerData, reviews: 0 });
+      }
+      saveWorkersLocal();
+      renderWorkersTable();
+      renderWorkerFilterOptions();
+      closeWorkerModal();
+    }
+  });
+
+  /* ---------------- Preview modal ---------------- */
+  function receiptHTML(b){
+    const hoursLabel = (b.hours || []).map(fmtHour).join(' · ');
+    const conflicts = conflictingWith(b);
+    return `
+      <div class="receipt-ref">
+        <div class="r">${fmtRef(b.id)}</div>
+        <div class="s"><span class="status-pill ${b.status}">${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</span></div>
+      </div>
+      ${conflicts.length ? `<div class="conflict-banner">⚠ تعارض توقيت مع ${conflicts.map(c => fmtRef(c.id)).join('، ')} — نفس العاملة ونفس الساعات بنفس اليوم.</div>` : ''}
+      <div class="receipt-rows" style="margin-bottom:16px;">
+        <div class="receipt-row"><span>العميلة</span><span>${b.customerName || '—'}</span></div>
+        <div class="receipt-row"><span>رقم الجوال</span><span>${b.customerPhone || '—'}</span></div>
+        ${b.customerPhone2 ? `<div class="receipt-row"><span>جوال إضافي</span><span>${b.customerPhone2}</span></div>` : ''}
+        ${b.customerEmail ? `<div class="receipt-row"><span>الإيميل</span><span>${b.customerEmail}</span></div>` : ''}
+        <div class="receipt-row"><span>العنوان</span><span style="white-space:pre-wrap;">${b.customerAddress || '—'}</span></div>
+        ${(b.customerLat && b.customerLng) ? `<div class="receipt-row"><span>الموقع</span><span><a href="https://www.google.com/maps?q=${b.customerLat},${b.customerLng}" target="_blank" rel="noopener">فتح على الخريطة</a></span></div>` : ''}
+        <div class="receipt-row"><span>الدفع</span><span>${b.paymentConfirmed ? `✓ مدفوع (${b.paymentMethod || 'بنفت'})` : 'غير مؤكد'}</span></div>
+      </div>
+      ${b.customerReceiptImage ? `
+      <div class="payment-receipt-block">
+        <div class="prb-label">📎 صورة إيصال التحويل</div>
+        <a href="${b.customerReceiptImage}" target="_blank" rel="noopener">
+          <img src="${b.customerReceiptImage}" alt="إيصال التحويل" class="prb-img">
+        </a>
+      </div>` : ''}
+      <div class="receipt-worker">
+        <div class="avatar-sm" style="width:46px;height:46px;font-size:1rem;background:${b.workerColor || '#2F9E8F'}">${b.workerInitials || ""}</div>
+        <div>
+          <div class="worker-name-sm" style="font-size:1rem;">${b.workerName}</div>
+          <div class="worker-area-sm">${b.workerArea || ""} · ${fmtPrice(b.pricePerHour || 0)} / ساعة</div>
+        </div>
+      </div>
+      <div class="receipt-rows">
+        <div class="receipt-row"><span>التاريخ</span><span>${b.dateLabel || ""}</span></div>
+        <div class="receipt-row"><span>عدد الساعات</span><span>${toArabicDigits((b.hours||[]).length)}</span></div>
+        <div class="receipt-row"><span>الأوقات</span><span>${hoursLabel}</span></div>
+        <div class="receipt-row"><span>أُنشئ في</span><span>${fmtCreated(b.createdAt)}</span></div>
+      </div>
+      <div class="receipt-total">
+        <span class="l">الإجمالي</span>
+        <span class="v">${fmtPrice(b.total)}</span>
+      </div>
+    `;
+  }
+
+  function openPreview(id){
+    const b = state.bookings.find(x => idEq(x.id, id));
+    if(!b) return;
+    state.previewId = id;
+    document.getElementById('receiptBody').innerHTML = receiptHTML(b);
+    const toggleBtn = document.getElementById('modalCancelToggleBtn');
+    toggleBtn.textContent = b.status === 'cancelled' ? '↺ استعادة الحجز' : '✕ إلغاء الحجز';
+    toggleBtn.className = b.status === 'cancelled' ? 'btn btn-ghost' : 'btn btn-danger-outline';
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closePreview(){
+    document.getElementById('modalOverlay').classList.remove('open');
+    state.previewId = null;
+  }
+  document.getElementById('modalCloseBtn').addEventListener('click', closePreview);
+  document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'modalOverlay') closePreview();
+  });
+  document.getElementById('modalCancelToggleBtn').addEventListener('click', ()=>{
+    const b = state.bookings.find(x => idEq(x.id, state.previewId));
+    if(!b) return;
+    let newStatus;
+    if(b.status === 'cancelled'){
+      // Restoring: block if it would collide with an already-confirmed booking
+      const wouldConflict = state.bookings.some(other =>
+        !idEq(other.id, b.id) && other.status !== 'cancelled' &&
+        idEq(other.workerId, b.workerId) && other.dateISO === b.dateISO &&
+        (other.hours || []).some(h => (b.hours || []).includes(h))
+      );
+      if(wouldConflict){
+        alert("ما ينقدر يتم استعادة هذا الحجز — نفس العاملة محجوزة بنفس الساعات في نفس اليوم لحجز مؤكد آخر. ألغي أو عدّلي الحجز المتعارض أولًا.");
+        return;
+      }
+      newStatus = 'confirmed';
+    } else {
+      newStatus = 'cancelled';
+    }
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, updateDoc } = window.fb;
+      updateDoc(doc(window.db, "bookings", b.id), { status: newStatus }).then(()=>{
+        openPreview(b.id);
+      }).catch(()=>{
+        alert("ما قدرنا نحدّث حالة الحجز، تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      });
+    } else {
+      b.status = newStatus;
+      saveBookingsLocal();
+      renderAll();
+      openPreview(b.id);
+    }
+  });
+  document.getElementById('printReceiptBtn').addEventListener('click', ()=>{
+    if(state.previewId != null) printReceipt(state.previewId);
+  });
+
+  /* ---------------- Printing ---------------- */
+  function printReceipt(id){
+    const b = state.bookings.find(x => idEq(x.id, id));
+    if(!b) return;
+    document.getElementById('printReceipt').innerHTML = `
+      <div class="print-receipt-card">
+        <div class="print-title">شركة المنى لتوريد العاملات — إيصال حجز</div>
+        <div class="print-sub">${fmtRef(b.id)} · طُبع في ${fmtCreated(new Date().toISOString())}</div>
+        ${receiptHTML(b)}
+      </div>
+    `;
+    document.body.classList.add('print-mode-receipt');
+    window.print();
+  }
+
+  function getScheduleOrderedList(){
+    return getFiltered().slice().sort((a,b)=>{
+      const dateCompare = (a.dateISO || "").localeCompare(b.dateISO || "");
+      if(dateCompare !== 0) return dateCompare;
+      const aFirst = Math.min(...(a.hours && a.hours.length ? a.hours : [99]));
+      const bFirst = Math.min(...(b.hours && b.hours.length ? b.hours : [99]));
+      return aFirst - bFirst;
+    });
+  }
+
+  function printList(){
+    const list = getScheduleOrderedList();
+    const rows = list.map(b => `
+      <tr>
+        <td>${b.dateLabel || ""}</td>
+        <td>${(b.hours || []).map(fmtHour).join(' · ')}</td>
+        <td>${b.workerName}</td>
+        <td>${b.customerName || '—'}<br>${b.customerPhone || ''}${b.customerPhone2 ? ' / ' + b.customerPhone2 : ''}</td>
+        <td>${b.customerAddress || '—'}</td>
+        <td>${fmtPrice(b.total)}</td>
+        <td>${b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة'}</td>
+        <td>${fmtRef(b.id)}</td>
+      </tr>
+    `).join('');
+    document.getElementById('printReport').innerHTML = `
+      <div class="print-title">شركة المنى لتوريد العاملات — جدول المواعيد</div>
+      <div class="print-sub">تاريخ الطباعة: ${fmtCreated(new Date().toISOString())} · عدد المواعيد: ${list.length}</div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>التاريخ</th><th>الوقت</th><th>العاملة</th><th>العميلة والجوال</th><th>العنوان</th><th>الإجمالي</th><th>الحالة</th><th>رقم الحجز</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+    document.body.classList.add('print-mode-list');
+    window.print();
+  }
+  document.getElementById('printListBtn').addEventListener('click', printList);
+
+  function exportExcel(){
+    if(typeof XLSX === 'undefined'){
+      alert("تعذر تحميل مكتبة التصدير — تأكدي من الاتصال بالإنترنت وحاولي مرة ثانية");
+      return;
+    }
+    const list = getScheduleOrderedList();
+    if(list.length === 0){ alert("ما فيه حجوزات لتصديرها"); return; }
+    const rows = list.map(b => ({
+      "رقم الحجز": fmtRef(b.id),
+      "التاريخ": b.dateLabel || "",
+      "الوقت": (b.hours || []).map(fmtHour).join(' ، '),
+      "العاملة": b.workerName || "",
+      "منطقة العاملة": b.workerArea || "",
+      "العميلة": b.customerName || "",
+      "الإيميل": b.customerEmail || "",
+      "الجوال الأول": b.customerPhone || "",
+      "الجوال الثاني": b.customerPhone2 || "",
+      "العنوان": b.customerAddress || "",
+      "الإجمالي (د.ب)": b.total || 0,
+      "الحالة": b.status === 'cancelled' ? 'ملغاة' : 'مؤكدة',
+      "الدفع": b.paymentConfirmed ? `مدفوع (${b.paymentMethod || 'بنفت'})` : 'غير مؤكد',
+      "أُنشئ في": fmtCreated(b.createdAt)
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Object.keys(rows[0]).map(()=> ({ wch: 18 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الحجوزات");
+    const dateStamp = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `حجوزات-المنى-${dateStamp}.xlsx`);
+  }
+  document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+
+  function exportPdf(){
+    const list = getScheduleOrderedList();
+    if(list.length === 0){ alert("ما فيه حجوزات لتصديرها"); return; }
+    alert("بيفتح الآن مربع الطباعة — اختاري \"Save as PDF\" / \"حفظ كـ PDF\" من قائمة الوجهة (Destination) بدل الطابعة، ثم احفظي الملف.");
+    printList();
+  }
+  document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+
+
+  document.getElementById('clearAllBtn').addEventListener('click', ()=>{
+    if(state.bookings.length === 0) return;
+    if(!confirm(`تأكيد حذف جميع الحجوزات (${state.bookings.length}) نهائيًا؟ هذا مفيد لتنظيف بيانات تجريبية، ولا يمكن التراجع عنه.`)) return;
+    if(window.FIREBASE_CONFIGURED && window.db){
+      const { doc, deleteDoc } = window.fb;
+      Promise.all(state.bookings.map(b => deleteDoc(doc(window.db, "bookings", b.id)))).catch(()=>{
+        alert("صار خطأ أثناء حذف بعض الحجوزات، جربي مرة ثانية");
+      });
+    } else {
+      state.bookings = [];
+      saveBookingsLocal();
+      renderAll();
+    }
+  });
+
+  window.addEventListener('afterprint', ()=>{
+    document.body.classList.remove('print-mode-list', 'print-mode-receipt');
+  });
+
+  /* ---------------- Toolbar events ---------------- */
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    state.search = e.target.value;
+    renderTable();
+  });
+  document.getElementById('statusFilter').addEventListener('change', (e)=>{
+    state.status = e.target.value;
+    renderTable();
+  });
+  document.getElementById('workerFilter').addEventListener('change', (e)=>{
+    state.worker = e.target.value;
+    renderTable();
+  });
+  document.getElementById('sortOrder').addEventListener('change', (e)=>{
+    state.sort = e.target.value;
+    renderTable();
+  });
+  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+    if(window.FIREBASE_CONFIGURED && window.db){
+      // Live listeners already keep data current — this is just a visual reassurance re-render
+      renderAll();
+    } else {
+      loadBookingsLocal();
+      loadWorkersLocal();
+      renderAll();
+    }
+  });
+
+  function initLocalMode(){
+    loadBookingsLocal();
+    loadWorkersLocal();
+    renderAll();
+
+    // Same-device, cross-tab convenience only (does NOT sync across different devices)
+    window.addEventListener('storage', (e)=>{
+      if(e.key === STORAGE_KEY){
+        loadBookingsLocal();
+        renderAll();
+      }
+      if(e.key === WORKERS_STORAGE_KEY){
+        loadWorkersLocal();
+        renderAll();
+      }
+    });
+  }
+
+  function initCloudMode(){
+    subscribeWorkersCloud();
+    subscribeBookingsCloud();
+  }
+
+  let cloudFallbackDone = false;
+  let cloudConnected = false;
+  function fallbackToLocalMode(reason){
+    if(cloudFallbackDone || cloudConnected) return;
+    cloudFallbackDone = true;
+    console.warn('Switching to local storage mode:', reason);
+    debugLog("FALLBACK TO LOCAL MODE — السبب: " + reason);
+    setSyncStatus(false);
+    initLocalMode();
+  }
+  function markCloudConnected(){
+    if(cloudConnected) return;
+    cloudConnected = true;
+    debugLog("CLOUD CONNECTED ✓ — أول قراءة ناجحة من Firestore وصلت");
+    setSyncStatus(true);
+  }
+  function setSyncStatus(isCloud){
+    const el = document.getElementById('syncStatus');
+    if(!el) return;
+    el.className = 'sync-status show ' + (isCloud ? 'ok' : 'off');
+    el.innerHTML = isCloud
+      ? '<i></i> متصلة — البيانات تتزامن مباشرة'
+      : '<i></i> غير متصلة — البيانات محلية بهذا الجهاز بس';
+  }
+
+  /* ---------------- Init ---------------- */
+  if(window.FIREBASE_CONFIGURED){
+    setTimeout(()=> fallbackToLocalMode('timeout'), 7000);
+    if(window.db){
+      initCloudMode();
+    } else {
+      window.addEventListener('firebase-ready', initCloudMode, { once:true });
+      window.addEventListener('firebase-not-configured', ()=> fallbackToLocalMode('bootstrap-failed'), { once:true });
+    }
+  } else {
+    initLocalMode();
+  }
+})();
+</script>
+
+<script>
+async function deleteAllWorkersFirebase(){
+ if(!confirm('سيتم حذف جميع العاملات من Firebase نهائياً. هل تريد المتابعة؟')) return;
+ try{
+   if(window.db && window.firebase){
+     const snap=await db.collection('workers').get();
+     const batch=db.batch();
+     snap.forEach(doc=>batch.delete(doc.ref));
+     await batch.commit();
+     alert('تم حذف جميع العاملات.');
+     location.reload();
+   }else{
+     alert('Firebase غير متصل.');
+   }
+ }catch(e){
+   alert('خطأ: '+e.message);
+ }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ const b=document.createElement('button');
+ b.textContent='🗑 حذف جميع العاملات';
+ b.onclick=deleteAllWorkersFirebase;
+ b.style.margin='8px';
+ document.body.prepend(b);
+});
+</script>
+</body>
+</html>
