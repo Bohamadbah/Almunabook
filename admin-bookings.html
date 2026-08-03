@@ -477,14 +477,7 @@ window.addEventListener('unhandledrejection', (e)=>{
   // Compare ids reliably whether they're numbers (local mode) or Firestore doc-id strings (cloud mode)
   function idEq(a, b){ return String(a) === String(b); }
 
-  const DEFAULT_WORKERS = [
-    { id:1, name:"فاطمة العلي", area:"المنامة", rating:4.9, reviews:132, price:3.5, tags:["تنظيف عميق","نوافذ"], color:"#2F9E8F", initials:"ف ع" },
-    { id:2, name:"مريم حسن", area:"الرفاع", rating:4.8, reviews:98, price:3.0, tags:["غسيل ملابس","كي"], color:"#F2A20C", initials:"م ح" },
-    { id:3, name:"سارة يوسف", area:"حمد", rating:5.0, reviews:210, price:4.0, tags:["تنظيف عميق","مطبخ"], color:"#C9503D", initials:"س ي" },
-    { id:4, name:"نورة سالم", area:"سترة", rating:4.7, reviews:76, price:3.25, tags:["حضانة أطفال","تنظيف عام"], color:"#0E3B39", initials:"ن س" },
-    { id:5, name:"هند عبدالله", area:"عيسى تاون", rating:4.9, reviews:154, price:3.75, tags:["نوافذ","تنظيف عام"], color:"#2F9E8F", initials:"ه ع" },
-    { id:6, name:"ريم خالد", area:"المنامة", rating:4.6, reviews:64, price:2.9, tags:["تنظيف عام"], color:"#F2A20C", initials:"ر خ" },
-  ];
+  const DEFAULT_WORKERS = [];
 
   const state = {
     bookings: [],
@@ -503,13 +496,13 @@ window.addEventListener('unhandledrejection', (e)=>{
       const raw = localStorage.getItem(WORKERS_STORAGE_KEY);
       if(raw){
         const parsed = JSON.parse(raw);
-        state.workers = Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WORKERS;
+        state.workers = Array.isArray(parsed) ? parsed : [];
       } else {
-        state.workers = DEFAULT_WORKERS;
+        state.workers = [];
         localStorage.setItem(WORKERS_STORAGE_KEY, JSON.stringify(state.workers));
       }
     }catch(e){
-      state.workers = DEFAULT_WORKERS;
+      state.workers = [];
     }
   }
   function saveWorkersLocal(){
@@ -1264,6 +1257,33 @@ window.addEventListener('unhandledrejection', (e)=>{
     initLocalMode();
   }
 })();
+</script>
+
+<script>
+async function deleteAllWorkersFirebase(){
+ if(!confirm('سيتم حذف جميع العاملات من Firebase نهائياً. هل تريد المتابعة؟')) return;
+ try{
+   if(window.db && window.firebase){
+     const snap=await db.collection('workers').get();
+     const batch=db.batch();
+     snap.forEach(doc=>batch.delete(doc.ref));
+     await batch.commit();
+     alert('تم حذف جميع العاملات.');
+     location.reload();
+   }else{
+     alert('Firebase غير متصل.');
+   }
+ }catch(e){
+   alert('خطأ: '+e.message);
+ }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ const b=document.createElement('button');
+ b.textContent='🗑 حذف جميع العاملات';
+ b.onclick=deleteAllWorkersFirebase;
+ b.style.margin='8px';
+ document.body.prepend(b);
+});
 </script>
 </body>
 </html>
