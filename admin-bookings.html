@@ -6,7 +6,7 @@
 <title>لوحة الإدارة | شركة المنى لتوريد العاملات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
 <script type="module">
   /* Same Firebase project as cleaning-booking.html — paste the identical 6 values here. */
   const firebaseConfig = {
@@ -76,6 +76,7 @@
   header.site{
     position:sticky; top:0; z-index:50;
     background:rgba(246,250,249,0.92);
+    -webkit-backdrop-filter:blur(10px);
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);
   }
@@ -186,7 +187,8 @@
 
   /* ---------- Modal / preview ---------- */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(14,59,57,.55); backdrop-filter:blur(3px);
+    position:fixed; inset:0; background:rgba(14,59,57,.55); -webkit-backdrop-filter:blur(3px);
+ backdrop-filter:blur(3px);
     display:none; align-items:center; justify-content:center; padding:20px; z-index:200;
   }
   .modal-overlay.open{ display:flex; }

@@ -6,7 +6,7 @@
 <title>شركة المنى لتوريد العاملات | حجز عاملات نظافة بالساعة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/emailjs-com/3.2.0/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/emailjs-com/3.2.0/email.min.js" crossorigin="anonymous"></script>
 <script type="module">
   /* ---------------- Shared cloud database (Firebase Firestore) ----------------
      Without this configured, the site falls back to per-device local storage
@@ -87,6 +87,7 @@
   header.site{
     position:sticky; top:0; z-index:50;
     background:rgba(246,250,249,0.9);
+    -webkit-backdrop-filter:blur(10px);
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);
   }
@@ -176,9 +177,13 @@
     padding:26px; position:relative;
   }
   .step .num{
-    font-family:'Cairo',sans-serif; font-weight:900; font-size:2rem; color:var(--teal-light);
-    -webkit-text-stroke:1.5px var(--teal); color:transparent;
+    font-family:'Cairo',sans-serif; font-weight:900; font-size:2rem; color:var(--teal);
     margin-bottom:10px; display:block;
+  }
+  @supports (-webkit-text-stroke: 1px black) or (text-stroke: 1px black){
+    .step .num{
+      -webkit-text-stroke:1.5px var(--teal); text-stroke:1.5px var(--teal); color:transparent;
+    }
   }
   .step h3{ font-size:1.1rem; margin-bottom:8px; }
   .step p{ color:var(--muted); font-size:.92rem; margin:0; }
